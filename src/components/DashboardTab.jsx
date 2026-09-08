@@ -7,6 +7,19 @@ const { Title, Text } = Typography
 
 const TOP_N = 5
 
+const GAME_COLORS = [
+  { bg: '#fffbe6', border: '#faad14' }, // Yellow
+  { bg: '#fff7e6', border: '#ff7a45' }, // Orange
+  { bg: '#f6ffed', border: '#52c41a' }, // Green
+  { bg: '#e6f7ff', border: '#1890ff' }, // Blue
+  { bg: '#f9f0ff', border: '#722ed1' }, // Purple
+  { bg: '#fff1f0', border: '#ff4d4f' }, // Red
+]
+
+function getGameColor(index) {
+  return GAME_COLORS[index % GAME_COLORS.length]
+}
+
 function parseTimeString(timeStr) {
   if (typeof timeStr !== 'string') return timeStr
   const parts = timeStr.split(':')
@@ -87,6 +100,8 @@ export default function DashboardTab() {
       <Row gutter={[24, 24]}>
         {games.map((game, idx) => {
           const gameTeams = teams.filter((t) => t.game_name === game.name)
+
+          // Get all completed teams and sort by completion time (least time = winner)
           const leastTime = gameTeams
             .filter((t) => t.status === 'completed' && t.completion_time != null)
             .sort((a, b) => {
@@ -94,13 +109,16 @@ export default function DashboardTab() {
               const timeB = typeof b.completion_time === 'string' ? parseTimeString(b.completion_time) : b.completion_time
               return timeA - timeB
             })
-            .slice(0, 3)
+
+          // Get waiting/in-progress teams
           const nextTurn = gameTeams
             .filter((t) => t.status !== 'completed')
             .sort((a, b) => new Date(a.queued_at) - new Date(b.queued_at))
             .slice(0, 5)
 
+          // The winner is the team with the least completion time
           const podiumTeams = leastTime.slice(0, 1)
+          const gameColor = getGameColor(idx)
 
           return (
             <Col xs={24} md={12} lg={8} key={game.name}>
@@ -115,20 +133,23 @@ export default function DashboardTab() {
                     <>
                       {podiumTeams[0] ? (
                         <div style={{
-                          backgroundColor: '#ffd700',
+                          backgroundColor: gameColor.bg,
+                          borderLeft: `4px solid ${gameColor.border}`,
                           padding: '16px 20px',
                           borderRadius: '8px',
                           marginBottom: '16px',
                           display: 'flex',
+                          flexDirection: 'row',
                           alignItems: 'center',
-                          gap: '16px',
-                          height: '60px'
+                          gap: '12px',
+                          flexWrap: 'wrap',
+                          minHeight: '60px'
                         }}>
-                          <div style={{ fontSize: '32px', minWidth: '40px' }}>🥇</div>
-                          <div style={{ fontSize: '16px', fontWeight: 'bold', color: '#000', flex: 1 }}>
+                          <div style={{ fontSize: '32px', order: 1 }}>🥇</div>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#000', flex: '1 1 auto', minWidth: '150px', order: 2 }}>
                             {podiumTeams[0].team_name}
                           </div>
-                          <div style={{ fontSize: '24px', color: '#000', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: '20px', color: '#000', fontWeight: '600', order: 3, marginLeft: 'auto' }}>
                             {formatTime(podiumTeams[0].completion_time)}
                           </div>
                         </div>
