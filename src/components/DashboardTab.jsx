@@ -141,15 +141,19 @@ export default function DashboardTab() {
                           display: 'flex',
                           flexDirection: 'row',
                           alignItems: 'center',
+                          justifyContent: 'space-between',
                           gap: '12px',
                           flexWrap: 'wrap',
-                          minHeight: '60px'
+                          minHeight: '60px',
+                          '@media (max-width: 768px)': {
+                            justifyContent: 'center'
+                          }
                         }}>
-                          <div style={{ fontSize: '32px', order: 1 }}>🥇</div>
-                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#000', flex: '1 1 auto', minWidth: '150px', order: 2 }}>
+                          <div style={{ fontSize: '32px', order: 1, flex: window.innerWidth < 768 ? '1 1 100%' : '0 0 auto', textAlign: 'center' }}>🥇</div>
+                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#000', flex: window.innerWidth < 768 ? '1 1 100%' : '1 1 auto', minWidth: '150px', order: 2, textAlign: 'center' }}>
                             {podiumTeams[0].team_name}
                           </div>
-                          <div style={{ fontSize: '20px', color: '#000', fontWeight: '600', order: 3, marginLeft: 'auto' }}>
+                          <div style={{ fontSize: '20px', color: '#000', fontWeight: '600', order: 3, flex: window.innerWidth < 768 ? '1 1 100%' : '0 0 auto', textAlign: 'center', marginLeft: window.innerWidth < 768 ? '0' : 'auto' }}>
                             {formatTime(podiumTeams[0].completion_time)}
                           </div>
                         </div>
