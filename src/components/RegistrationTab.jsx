@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Form, Input, Select, Button, Card, Alert, Space, Typography, Row, Col } from 'antd'
+import { Form, Input, Select, Button, Card, Alert, Space, Typography, Row, Col, Switch } from 'antd'
 import { QRCodeCanvas } from 'qrcode.react'
 import { DownloadOutlined } from '@ant-design/icons'
 import { supabase } from '../lib/supabaseClient'
@@ -15,6 +15,7 @@ export default function RegistrationTab() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [registeredTeam, setRegisteredTeam] = useState(null) // { team_id, team_name }
+  const [validationEnabled, setValidationEnabled] = useState(true)
   const qrRef = useRef(null)
 
   useEffect(() => {
@@ -136,7 +137,7 @@ export default function RegistrationTab() {
 
   if (registeredTeam) {
     return (
-      <Card style={{ maxWidth: 480, margin: '0 auto' }}>
+      <Card style={{ maxWidth: 600, margin: '0 auto', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <div style={{ textAlign: 'center' }}>
           <Alert
             type="success"
@@ -177,8 +178,14 @@ export default function RegistrationTab() {
   }
 
   return (
-    <Card style={{ maxWidth: 480, margin: '0 auto' }}>
-      <Title level={4}>Register a Team</Title>
+    <Card style={{ maxWidth: 600, margin: '0 auto', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+        <Title level={4} style={{ margin: 0 }}>Register a Team</Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Text style={{ fontSize: '12px' }}>Validation</Text>
+          <Switch checked={validationEnabled} onChange={setValidationEnabled} />
+        </div>
+      </div>
       {error && (
         <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} closable onClose={() => setError(null)} />
       )}
@@ -186,7 +193,7 @@ export default function RegistrationTab() {
         <Form.Item
           name="team_name"
           label="Team Name"
-          rules={[{ required: true, message: 'Team name is required' }]}
+          rules={validationEnabled ? [{ required: true, message: 'Team name is required' }] : []}
         >
           <Input placeholder="e.g. The Sprinters" />
         </Form.Item>
@@ -194,7 +201,7 @@ export default function RegistrationTab() {
         <Form.Item
           name="game_name"
           label="Select game"
-          rules={[{ required: true, message: 'Select a game' }]}
+          rules={validationEnabled ? [{ required: true, message: 'Select a game' }] : []}
         >
           <Select
             placeholder="Select a game"
@@ -203,14 +210,16 @@ export default function RegistrationTab() {
           />
         </Form.Item>
 
-        <div style={{ backgroundColor: '#fafafa', padding: '12px 16px', borderRadius: '4px', marginBottom: '16px' }}>
-          <Text type="secondary" style={{ fontSize: '13px' }}>
-            <ul style={{ margin: '0', paddingLeft: '0', marginLeft: '0' }}>
-              <li>Minimum 3 players required to play.</li>
-              <li>All Employee IDs must be unique across every team.</li>
-            </ul>
-          </Text>
-        </div>
+        {validationEnabled && (
+          <div style={{ backgroundColor: '#fafafa', padding: '12px 16px', borderRadius: '4px', marginBottom: '16px' }}>
+            <Text type="secondary" style={{ fontSize: '13px' }}>
+              <ul style={{ margin: '0', paddingLeft: '0', marginLeft: '0' }}>
+                <li>Minimum 3 players required to play.</li>
+                <li>All Employee IDs must be unique across every team.</li>
+              </ul>
+            </Text>
+          </div>
+        )}
 
         {[1, 2, 3, 4].map((n) => {
           const isRequired = n !== 4
@@ -219,7 +228,7 @@ export default function RegistrationTab() {
               key={n}
               name={`eid_${n}`}
               label={`Player-0${n}`}
-              rules={[
+              rules={validationEnabled ? [
                 {
                   required: isRequired,
                   message: 'Field Required',
@@ -228,7 +237,7 @@ export default function RegistrationTab() {
                   pattern: /^.\d{6}$/,
                   message: 'Employee ID must be in this format "I7XXXXX"',
                 },
-              ]}
+              ] : []}
             >
               <Input placeholder={`SID: I000000`} />
             </Form.Item>

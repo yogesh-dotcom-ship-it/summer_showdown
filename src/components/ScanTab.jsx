@@ -28,11 +28,9 @@ export default function ScanTab() {
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 240, height: 240 } },
-        async (decodedText) => {
+        (decodedText) => {
           if (stopped) return
           stopped = true
-          await scanner.stop().catch(() => {})
-          await scanner.clear().catch(() => {})
           setScanning(false)
           lookupTeam(decodedText.trim())
         },
@@ -49,8 +47,14 @@ export default function ScanTab() {
 
     return () => {
       stopped = true
-      scanner.stop().catch(() => {})
-      scanner.clear().catch(() => {})
+      // stop() and clear() must run in sequence, not in parallel -- clear()
+      // throws "Cannot clear while scan is ongoing" if it runs before stop()
+      // has actually finished tearing down the camera.
+      scanner
+        .stop()
+        .catch(() => {})
+        .then(() => scanner.clear())
+        .catch(() => {})
     }
   }, [scanning])
 
@@ -87,14 +91,14 @@ export default function ScanTab() {
     }
   }
 
-  async function handleSubmitTime(elapsedSeconds) {
+  async function handleSubmitTime(elapsedTime) {
     if (!team) return
     setSubmitting(true)
     setSubmitError(null)
     const { data, error } = await supabase
       .from('ss_teams')
       .update({
-        completion_time: elapsedSeconds,
+        completion_time: elapsedTime,
         status: 'completed',
         completed_at: new Date().toISOString(),
       })
@@ -119,7 +123,7 @@ export default function ScanTab() {
   }
 
   return (
-    <Card style={{ maxWidth: 520, margin: '0 auto' }}>
+    <Card style={{ maxWidth: 600, margin: '0 auto', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
       <Title level={4}>Scan Team QR Code</Title>
 
       {!team && (
@@ -173,7 +177,7 @@ export default function ScanTab() {
               <Alert
                 type="success"
                 showIcon
-                message={`Time already recorded: ${team.completion_time}s`}
+                message={`Time already recorded: ${team.completion_time}`}
                 style={{ marginBottom: 16 }}
               />
               <Space style={{ width: '100%', justifyContent: 'center' }}>

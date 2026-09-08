@@ -60,7 +60,12 @@ export default function Stopwatch({ onSubmit, submitting, disabled }) {
 
   function handleSubmit() {
     const finalMs = running ? accumulatedMs + (Date.now() - runStartRef.current) : accumulatedMs
-    onSubmit(Math.round(finalMs / 1000))
+    const totalSeconds = Math.floor(finalMs / 1000)
+    const minutes = Math.floor(totalSeconds / 60)
+    const seconds = totalSeconds % 60
+    const milliseconds = finalMs % 1000
+    const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(milliseconds).padStart(3, '0')}`
+    onSubmit(timeString)
   }
 
   return (
@@ -72,7 +77,6 @@ export default function Stopwatch({ onSubmit, submitting, disabled }) {
         {!running ? (
           <Button
             type="primary"
-            size="large"
             icon={<PlayCircleOutlined />}
             onClick={handleStart}
             disabled={disabled}
@@ -80,17 +84,16 @@ export default function Stopwatch({ onSubmit, submitting, disabled }) {
             {accumulatedMs > 0 ? 'Resume' : 'Start'}
           </Button>
         ) : (
-          <Button size="large" icon={<PauseCircleOutlined />} onClick={handlePause}>
+          <Button icon={<PauseCircleOutlined />} onClick={handlePause}>
             Pause
           </Button>
         )}
-        <Button size="large" icon={<ReloadOutlined />} onClick={handleReset} disabled={disabled || !hasRun}>
+        <Button icon={<ReloadOutlined />} onClick={handleReset} disabled={disabled || !hasRun}>
           Reset
         </Button>
         <Button
           type="primary"
           ghost
-          size="large"
           icon={<CheckCircleOutlined />}
           onClick={handleSubmit}
           disabled={disabled || !hasRun || running}

@@ -66,7 +66,7 @@ function App() {
           />
         </Drawer>
 
-        <Content style={{ padding: '24px 16px', maxWidth: 1200, margin: '0 auto', width: '100%' }}>
+        <Content style={{ padding: '32px 24px', maxWidth: 1400, margin: '0 auto', width: '100%', backgroundColor: '#f5f5f5', minHeight: 'calc(100vh - 64px)' }}>
           {renderPage()}
         </Content>
       </Layout>
