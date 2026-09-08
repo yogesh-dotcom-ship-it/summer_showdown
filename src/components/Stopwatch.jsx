@@ -72,6 +72,7 @@ export default function Stopwatch({ onSubmit, submitting, disabled }) {
         {!running ? (
           <Button
             type="primary"
+            size="large"
             icon={<PlayCircleOutlined />}
             onClick={handleStart}
             disabled={disabled}
@@ -79,16 +80,17 @@ export default function Stopwatch({ onSubmit, submitting, disabled }) {
             {accumulatedMs > 0 ? 'Resume' : 'Start'}
           </Button>
         ) : (
-          <Button icon={<PauseCircleOutlined />} onClick={handlePause}>
+          <Button size="large" icon={<PauseCircleOutlined />} onClick={handlePause}>
             Pause
           </Button>
         )}
-        <Button icon={<ReloadOutlined />} onClick={handleReset} disabled={disabled || !hasRun}>
+        <Button size="large" icon={<ReloadOutlined />} onClick={handleReset} disabled={disabled || !hasRun}>
           Reset
         </Button>
         <Button
           type="primary"
           ghost
+          size="large"
           icon={<CheckCircleOutlined />}
           onClick={handleSubmit}
           disabled={disabled || !hasRun || running}

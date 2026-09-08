@@ -64,7 +64,7 @@ export default function ScanTab() {
       .maybeSingle()
 
     if (teamError || !teamData) {
-      setLookupError(`No team found for code "${teamId}". Try scanning again.`)
+      setLookupError('QR code is not valid.')
       setTeam(null)
       return
     }
@@ -129,7 +129,7 @@ export default function ScanTab() {
             <Alert type="warning" showIcon message={lookupError} style={{ marginBottom: 16 }} />
           )}
           {!scanning ? (
-            <Button type="primary" block onClick={() => { reset(); setScanning(true) }}>
+            <Button type="primary" size="large" onClick={() => { reset(); setScanning(true) }}>
               Start Scanning
             </Button>
           ) : (
@@ -149,15 +149,20 @@ export default function ScanTab() {
 
       {team && (
         <>
-          <Descriptions column={1} bordered size="small" style={{ marginBottom: 16 }}>
-            <Descriptions.Item label="Team">{team.team_name}</Descriptions.Item>
-            <Descriptions.Item label="Code">{team.team_id}</Descriptions.Item>
-            <Descriptions.Item label="Game">{team.game_name}</Descriptions.Item>
-            <Descriptions.Item label="Employee IDs">{members.join(', ')}</Descriptions.Item>
-            <Descriptions.Item label="Status">
-              <Tag color={team.status === 'completed' ? 'green' : 'blue'}>{team.status}</Tag>
-            </Descriptions.Item>
-          </Descriptions>
+          <div style={{ marginBottom: 24 }}>
+            <Title level={5} style={{ marginBottom: 8, fontSize: '14px', fontWeight: '600' }}>
+              Team name : {team.team_name}
+            </Title>
+            <div style={{ lineHeight: '1.8' }}>
+              {members.map((eid, idx) => (
+                <div key={idx}>
+                  Player {String(idx + 1).padStart(2, '0')}
+                  <br />
+                  {eid}
+                </div>
+              ))}
+            </div>
+          </div>
 
           {submitError && (
             <Alert type="error" showIcon message={submitError} style={{ marginBottom: 16 }} />

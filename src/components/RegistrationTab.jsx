@@ -38,9 +38,9 @@ export default function RegistrationTab() {
     setSubmitting(true)
     setError(null)
 
-    const eids = [values.eid_1, values.eid_2, values.eid_3, values.eid_4].map((e) =>
-      e.trim()
-    )
+    const eids = [values.eid_1, values.eid_2, values.eid_3, values.eid_4]
+      .filter((e) => e) // Filter out empty values
+      .map((e) => e.trim())
 
     // Application-level duplicate check for a fast, friendly error message.
     // The real guard is the UNIQUE constraint on ss_team_members.eid, which
@@ -136,7 +136,7 @@ export default function RegistrationTab() {
         <Title level={4} style={{ marginTop: 16 }}>
           {registeredTeam.team_id}
         </Title>
-        <Button type="primary" onClick={() => setRegisteredTeam(null)}>
+        <Button type="primary" onClick={() => setRegisteredTeam(null)} size="large">
           Register another team
         </Button>
       </Card>
@@ -160,7 +160,7 @@ export default function RegistrationTab() {
 
         <Form.Item
           name="game_name"
-          label="Game"
+          label="Select game"
           rules={[{ required: true, message: 'Select a game' }]}
         >
           <Select
@@ -170,29 +170,46 @@ export default function RegistrationTab() {
           />
         </Form.Item>
 
-        <Row gutter={12}>
-          {[1, 2, 3, 4].map((n) => (
-            <Col span={12} key={n}>
-              <Form.Item
-                name={`eid_${n}`}
-                label={`Employee ID ${n}`}
-                rules={[{ required: true, message: 'Required' }]}
-              >
-                <Input placeholder={`EID ${n}`} />
-              </Form.Item>
-            </Col>
-          ))}
-        </Row>
+        <div style={{ backgroundColor: '#fafafa', padding: '12px 16px', borderRadius: '4px', marginBottom: '16px' }}>
+          <Text type="secondary" style={{ fontSize: '13px' }}>
+            <ul style={{ margin: '0', paddingLeft: '0', marginLeft: '0' }}>
+              <li>Minimum 3 players required to play.</li>
+              <li>All Employee IDs must be unique across every team.</li>
+            </ul>
+          </Text>
+        </div>
+
+        {[1, 2, 3, 4].map((n) => {
+          const isRequired = n !== 4
+          return (
+            <Form.Item
+              key={n}
+              name={`eid_${n}`}
+              label={`Player-0${n}`}
+              rules={[
+                {
+                  required: isRequired,
+                  message: 'Field Required',
+                },
+                {
+                  pattern: /^.\d{6}$/,
+                  message: 'Employee ID must be in this format "I7XXXXX"',
+                },
+              ]}
+            >
+              <Input placeholder={`SID: I000000`} />
+            </Form.Item>
+          )
+        })}
 
         <Form.Item>
           <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-            <Button type="primary" htmlType="submit" loading={submitting} block>
+            <Button type="primary" htmlType="submit" loading={submitting} block size="large">
               Register Team
             </Button>
           </Space>
         </Form.Item>
       </Form>
-      <Text type="secondary">All four Employee IDs must be unique across every team.</Text>
     </Card>
   )
 }
