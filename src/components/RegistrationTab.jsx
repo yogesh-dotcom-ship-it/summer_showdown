@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Form, Input, Select, Button, Card, Alert, Space, Typography, Row, Col } from 'antd'
 import { QRCodeCanvas } from 'qrcode.react'
+import { DownloadOutlined } from '@ant-design/icons'
 import { supabase } from '../lib/supabaseClient'
 import { generateTeamId } from '../utils/teamId'
 
@@ -14,6 +15,7 @@ export default function RegistrationTab() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
   const [registeredTeam, setRegisteredTeam] = useState(null) // { team_id, team_name }
+  const qrRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -122,23 +124,54 @@ export default function RegistrationTab() {
     form.resetFields()
   }
 
+  const handleDownloadQR = () => {
+    const canvas = qrRef.current?.querySelector('canvas')
+    if (canvas) {
+      const link = document.createElement('a')
+      link.href = canvas.toDataURL('image/png')
+      link.download = `${registeredTeam.team_name}_QR.png`
+      link.click()
+    }
+  }
+
   if (registeredTeam) {
     return (
-      <Card style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
-        <Alert
-          type="success"
-          showIcon
-          message="Team registered!"
-          description={`"${registeredTeam.team_name}" is set. Show this QR code at the scan station.`}
-          style={{ marginBottom: 24 }}
-        />
-        <QRCodeCanvas value={registeredTeam.team_id} size={220} includeMargin />
-        <Title level={4} style={{ marginTop: 16 }}>
-          {registeredTeam.team_id}
-        </Title>
-        <Button type="primary" onClick={() => setRegisteredTeam(null)} size="large">
-          Register another team
-        </Button>
+      <Card style={{ maxWidth: 480, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Alert
+            type="success"
+            showIcon
+            message="Registration successful"
+            style={{ marginBottom: 24, textAlign: 'left' }}
+          />
+          <Title level={5} style={{ marginBottom: 24, fontSize: '16px', textAlign: 'left' }}>
+            Team Name :
+          </Title>
+          <Title level={4} style={{ marginBottom: 24, fontSize: '24px', textAlign: 'center' }}>
+            {registeredTeam.team_name}
+          </Title>
+          <div style={{ marginBottom: 24, padding: '12px 16px', backgroundColor: '#f6ffed', borderRadius: '4px', border: '1px solid #b7eb8f' }}>
+            <Text style={{ fontSize: '14px', color: '#595959' }}>
+              Show this QR code at the scan station.
+            </Text>
+          </div>
+          <div style={{ marginBottom: 24, padding: '16px', backgroundColor: '#fafafa', borderRadius: '4px', display: 'inline-block' }}>
+            <div ref={qrRef}>
+              <QRCodeCanvas value={registeredTeam.team_id} size={220} includeMargin />
+            </div>
+          </div>
+          <Title level={5} style={{ marginTop: 24, marginBottom: 24, fontSize: '14px' }}>
+            QR Code
+          </Title>
+          <Space style={{ width: '100%', justifyContent: 'flex-start', gap: '8px', flexDirection: 'column' }}>
+            <Button type="primary" icon={<DownloadOutlined />} onClick={handleDownloadQR} size="large" block>
+              Download QR
+            </Button>
+            <Button onClick={() => setRegisteredTeam(null)} size="large" block>
+              Go back
+            </Button>
+          </Space>
+        </div>
       </Card>
     )
   }
