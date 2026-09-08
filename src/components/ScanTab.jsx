@@ -1,0 +1,200 @@
+import { useEffect, useRef, useState } from 'react'
+import { Card, Alert, Typography, Descriptions, Button, Tag, Popconfirm, Space } from 'antd'
+import { Html5Qrcode } from 'html5-qrcode'
+import { supabase } from '../lib/supabaseClient'
+import Stopwatch from './Stopwatch'
+
+const { Title, Text } = Typography
+const SCANNER_ELEMENT_ID = 'qr-scanner-region'
+
+export default function ScanTab() {
+  const [scanning, setScanning] = useState(false)
+  const [scanError, setScanError] = useState(null)
+  const [team, setTeam] = useState(null) // { team_id, team_name, game_name, status, completion_time }
+  const [members, setMembers] = useState([])
+  const [lookupError, setLookupError] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState(null)
+  const scannerRef = useRef(null)
+
+  useEffect(() => {
+    if (!scanning) return undefined
+
+    const scanner = new Html5Qrcode(SCANNER_ELEMENT_ID)
+    scannerRef.current = scanner
+    let stopped = false
+
+    scanner
+      .start(
+        { facingMode: 'environment' },
+        { fps: 10, qrbox: { width: 240, height: 240 } },
+        async (decodedText) => {
+          if (stopped) return
+          stopped = true
+          await scanner.stop().catch(() => {})
+          await scanner.clear().catch(() => {})
+          setScanning(false)
+          lookupTeam(decodedText.trim())
+        },
+        () => {
+          // per-frame decode failures are normal while the camera hunts for a code; ignore
+        }
+      )
+      .catch(() => {
+        setScanError(
+          'Could not access the camera. Check camera permissions for this site and that it is served over HTTPS.'
+        )
+        setScanning(false)
+      })
+
+    return () => {
+      stopped = true
+      scanner.stop().catch(() => {})
+      scanner.clear().catch(() => {})
+    }
+  }, [scanning])
+
+  async function lookupTeam(teamId) {
+    setLookupError(null)
+    setSubmitError(null)
+    const { data: teamData, error: teamError } = await supabase
+      .from('ss_teams')
+      .select('team_id, team_name, game_name, status, completion_time')
+      .eq('team_id', teamId)
+      .maybeSingle()
+
+    if (teamError || !teamData) {
+      setLookupError(`No team found for code "${teamId}". Try scanning again.`)
+      setTeam(null)
+      return
+    }
+
+    const { data: memberData } = await supabase
+      .from('ss_team_members')
+      .select('eid')
+      .eq('team_id', teamId)
+
+    setTeam(teamData)
+    setMembers(memberData?.map((m) => m.eid) ?? [])
+
+    // Mark the team as in progress the moment it's scanned in, so the
+    // dashboard's "Next Turn" ordering reflects who's currently running.
+    if (teamData.status === 'registered') {
+      await supabase
+        .from('ss_teams')
+        .update({ status: 'in_progress', started_at: new Date().toISOString() })
+        .eq('team_id', teamId)
+    }
+  }
+
+  async function handleSubmitTime(elapsedSeconds) {
+    if (!team) return
+    setSubmitting(true)
+    setSubmitError(null)
+    const { data, error } = await supabase
+      .from('ss_teams')
+      .update({
+        completion_time: elapsedSeconds,
+        status: 'completed',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('team_id', team.team_id)
+      .select()
+      .single()
+
+    if (error) {
+      setSubmitError(`Could not save the time: ${error.message}`)
+    } else {
+      setTeam(data)
+    }
+    setSubmitting(false)
+  }
+
+  function reset() {
+    setTeam(null)
+    setMembers([])
+    setLookupError(null)
+    setSubmitError(null)
+    setScanError(null)
+  }
+
+  return (
+    <Card style={{ maxWidth: 520, margin: '0 auto' }}>
+      <Title level={4}>Scan Team QR Code</Title>
+
+      {!team && (
+        <>
+          {scanError && <Alert type="error" showIcon message={scanError} style={{ marginBottom: 16 }} />}
+          {lookupError && (
+            <Alert type="warning" showIcon message={lookupError} style={{ marginBottom: 16 }} />
+          )}
+          {!scanning ? (
+            <Button type="primary" block onClick={() => { reset(); setScanning(true) }}>
+              Start Scanning
+            </Button>
+          ) : (
+            <>
+              <div id={SCANNER_ELEMENT_ID} style={{ width: '100%' }} />
+              <Button
+                block
+                style={{ marginTop: 12 }}
+                onClick={() => setScanning(false)}
+              >
+                Cancel
+              </Button>
+            </>
+          )}
+        </>
+      )}
+
+      {team && (
+        <>
+          <Descriptions column={1} bordered size="small" style={{ marginBottom: 16 }}>
+            <Descriptions.Item label="Team">{team.team_name}</Descriptions.Item>
+            <Descriptions.Item label="Code">{team.team_id}</Descriptions.Item>
+            <Descriptions.Item label="Game">{team.game_name}</Descriptions.Item>
+            <Descriptions.Item label="Employee IDs">{members.join(', ')}</Descriptions.Item>
+            <Descriptions.Item label="Status">
+              <Tag color={team.status === 'completed' ? 'green' : 'blue'}>{team.status}</Tag>
+            </Descriptions.Item>
+          </Descriptions>
+
+          {submitError && (
+            <Alert type="error" showIcon message={submitError} style={{ marginBottom: 16 }} />
+          )}
+
+          {team.status === 'completed' ? (
+            <>
+              <Alert
+                type="success"
+                showIcon
+                message={`Time already recorded: ${team.completion_time}s`}
+                style={{ marginBottom: 16 }}
+              />
+              <Space style={{ width: '100%', justifyContent: 'center' }}>
+                <Popconfirm
+                  title="Re-time this team?"
+                  description="This overwrites their previously submitted time."
+                  onConfirm={() => setTeam({ ...team, status: 'in_progress' })}
+                >
+                  <Button danger>Re-time</Button>
+                </Popconfirm>
+                <Button onClick={reset}>Scan Next Team</Button>
+              </Space>
+            </>
+          ) : (
+            <Stopwatch onSubmit={handleSubmitTime} submitting={submitting} />
+          )}
+
+          {team.status !== 'completed' && (
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <Text type="secondary">
+                <a onClick={reset}>Scan a different team</a>
+              </Text>
+            </div>
+          )}
+        </>
+      )}
+    </Card>
+  )
+}
