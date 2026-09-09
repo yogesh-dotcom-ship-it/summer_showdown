@@ -66,34 +66,30 @@ export default function RegistrationTab() {
       return
     }
 
-    const { data: existing, error: lookupError } = await supabase
-      .from('ss_team_members')
-      .select('eid')
-      .in('eid', eids)
-
-    if (lookupError) {
-      setError('Could not validate Employee IDs. Please try again.')
-      setSubmitting(false)
-      return
-    }
-
-    if (existing && existing.length > 0) {
-      const { data: memberTeamData } = await supabase
+    // Check each EID to see if they're already registered for THIS game
+    for (const eid of eids) {
+      const { data: memberData } = await supabase
         .from('ss_team_members')
         .select('team_id')
-        .in('eid', existing.map(e => e.eid))
+        .eq('eid', eid)
 
-      const teamIds = memberTeamData?.map(m => m.team_id) || []
-      const { data: teamGameData } = await supabase
-        .from('ss_teams')
-        .select('game_name')
-        .in('team_id', teamIds)
+      if (memberData && memberData.length > 0) {
+        // This EID exists, check which game(s) they're in
+        const { data: teamsData } = await supabase
+          .from('ss_teams')
+          .select('game_name')
+          .eq('team_id', memberData[0].team_id)
 
-      const sameGameRegistrations = teamGameData?.filter(t => t.game_name === selectedGame) || []
-      if (sameGameRegistrations.length > 0) {
-        setError(`One or more Employee IDs are already registered for ${selectedGame}. You can register for a different game.`)
-        setSubmitting(false)
-        return
+        if (teamsData && teamsData.length > 0) {
+          const existingGame = teamsData[0].game_name
+          if (existingGame === selectedGame) {
+            // Same employee, same game - NOT allowed
+            setError(`Employee ID ${eid} is already registered for ${selectedGame}.`)
+            setSubmitting(false)
+            return
+          }
+          // Different game - allowed, continue
+        }
       }
     }
 
