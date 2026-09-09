@@ -146,13 +146,14 @@ export default function RegistrationTab() {
   }
 
   if (registeredTeam) {
+    const gameColor = getGameColor(registeredTeam.game_name, games)
     return (
       <Card style={{
         maxWidth: 600,
         margin: '0 auto',
         borderRadius: '12px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        backgroundColor: '#fdf6d8'
+        backgroundColor: gameColor.bg
       }}>
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
           <div style={{ fontSize: '22px', marginBottom: 8 }}>✅</div>
