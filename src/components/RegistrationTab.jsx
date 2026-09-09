@@ -5,6 +5,7 @@ import html2canvas from 'html2canvas'
 import { supabase } from '../lib/supabaseClient'
 import { generateTeamId } from '../utils/teamId'
 import { getGameImage } from '../utils/gameImages'
+import { getGameDescription } from '../utils/gameDescriptions'
 
 const { Title, Text } = Typography
 
@@ -267,7 +268,7 @@ export default function RegistrationTab() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: 4 }}>{game.name}</div>
                   <div style={{ fontSize: '13px', color: '#8c8c8c', lineHeight: '1.4' }}>
-                    {game.description || 'Teams race to complete this challenge.'}
+                    {getGameDescription(game.name)}
                   </div>
                 </div>
               </div>
@@ -290,8 +291,6 @@ export default function RegistrationTab() {
       </Card>
     )
   }
-
-  const currentGame = games.find(g => g.name === selectedGame)
 
   return (
     <Card style={{ maxWidth: 600, margin: '0 auto', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
@@ -333,7 +332,7 @@ export default function RegistrationTab() {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: 4 }}>{selectedGame}</div>
           <div style={{ fontSize: '13px', color: '#8c8c8c', lineHeight: '1.4' }}>
-            {currentGame?.description || 'Teams race to complete this challenge.'}
+            {getGameDescription(selectedGame)}
           </div>
         </div>
       </div>
