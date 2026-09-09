@@ -65,31 +65,28 @@ export default function RegistrationTab() {
       return
     }
 
-    // Check each EID to see if they're already registered for THIS game
-    for (const eid of eids) {
-      const { data: memberData } = await supabase
-        .from('ss_team_members')
-        .select('team_id')
-        .eq('eid', eid)
+    // Fast, friendly pre-check: is any of these EIDs already registered for
+    // THIS specific game? (Same EID on a different game is fine.) The real
+    // guard is the unique(eid, game_name) constraint on ss_team_members --
+    // this only covers the common case with a nicer error message before
+    // hitting the database.
+    const { data: sameGameMembers, error: lookupError } = await supabase
+      .from('ss_team_members')
+      .select('eid')
+      .eq('game_name', selectedGame)
+      .in('eid', eids)
 
-      if (memberData && memberData.length > 0) {
-        // This EID exists, check which game(s) they're in
-        const { data: teamsData } = await supabase
-          .from('ss_teams')
-          .select('game_name')
-          .eq('team_id', memberData[0].team_id)
+    if (lookupError) {
+      setError('Could not validate Employee IDs. Please try again.')
+      setSubmitting(false)
+      return
+    }
 
-        if (teamsData && teamsData.length > 0) {
-          const existingGame = teamsData[0].game_name
-          if (existingGame === selectedGame) {
-            // Same employee, same game - NOT allowed
-            setError(`Employee ID ${eid} is already registered for ${selectedGame}.`)
-            setSubmitting(false)
-            return
-          }
-          // Different game - allowed, continue
-        }
-      }
+    if (sameGameMembers && sameGameMembers.length > 0) {
+      const duplicateEids = sameGameMembers.map((m) => m.eid).join(', ')
+      setError(`Employee ID(s) ${duplicateEids} already registered for ${selectedGame}.`)
+      setSubmitting(false)
+      return
     }
 
     let team = null
@@ -126,7 +123,7 @@ export default function RegistrationTab() {
       await supabase.from('ss_teams').delete().eq('team_id', team.team_id)
       setError(
         membersError.code === '23505'
-          ? 'One of these Employee IDs was just registered by someone else. Please check and try again.'
+          ? `One of these Employee IDs was just registered for ${selectedGame} by someone else. Please check and try again.`
           : `Registration failed: ${membersError.message}`
       )
       setSubmitting(false)

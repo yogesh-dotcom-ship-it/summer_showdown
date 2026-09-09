@@ -43,17 +43,41 @@ create index if not exists ss_teams_game_completion_idx on ss_teams (game_name, 
 
 -- ---------------------------------------------------------------------------
 -- 3. Team members table (normalized EIDs)
---    A single global UNIQUE constraint on eid is what actually prevents one
---    person being registered on two different teams -- four separate
---    eid_1..eid_4 columns with per-column uniqueness cannot guarantee that.
+--    unique(eid, game_name) prevents one person being registered twice for
+--    the SAME game, while still allowing them to join a DIFFERENT game on
+--    a different team. game_name is denormalized from ss_teams (via the
+--    trigger below) purely so this composite constraint can exist --
+--    Postgres unique constraints can't reference a column on another table.
 -- ---------------------------------------------------------------------------
 create table if not exists ss_team_members (
   id bigint generated always as identity primary key,
   team_id text not null references ss_teams(team_id) on delete cascade,
-  eid text not null unique
+  eid text not null,
+  game_name text not null references ss_games(name),
+  constraint ss_team_members_eid_game_key unique (eid, game_name)
 );
 
 create index if not exists ss_team_members_team_idx on ss_team_members (team_id);
+create index if not exists ss_team_members_eid_idx on ss_team_members (eid);
+
+-- Keep game_name in sync with the parent team automatically, so the app
+-- only ever has to insert (team_id, eid) and can't drift from the team's
+-- actual game.
+create or replace function ss_team_members_set_game_name()
+returns trigger as $$
+begin
+  select game_name into new.game_name
+  from ss_teams
+  where team_id = new.team_id;
+  return new;
+end;
+$$ language plpgsql;
+
+drop trigger if exists ss_team_members_set_game_name_trg on ss_team_members;
+create trigger ss_team_members_set_game_name_trg
+  before insert on ss_team_members
+  for each row
+  execute function ss_team_members_set_game_name();
 
 -- ---------------------------------------------------------------------------
 -- 4. Row Level Security
