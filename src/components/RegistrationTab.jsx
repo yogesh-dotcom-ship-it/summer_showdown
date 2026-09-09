@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Form, Input, Select, Button, Card, Alert, Space, Typography, Row, Col, Switch } from 'antd'
+import { Form, Input, Button, Card, Alert, Space, Typography } from 'antd'
 import { QRCodeCanvas } from 'qrcode.react'
 import { DownloadOutlined } from '@ant-design/icons'
 import { supabase } from '../lib/supabaseClient'
@@ -28,10 +28,10 @@ export default function RegistrationTab() {
   const [games, setGames] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
-  const [registeredTeam, setRegisteredTeam] = useState(null) // { team_id, team_name, game_name }
-  const [validationEnabled, setValidationEnabled] = useState(true)
-  const qrRef = useRef(null)
+  const [registeredTeam, setRegisteredTeam] = useState(null)
   const [selectedGame, setSelectedGame] = useState(null)
+  const [step, setStep] = useState('gameSelection') // 'gameSelection' or 'teamRegistration'
+  const qrRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -52,17 +52,14 @@ export default function RegistrationTab() {
     }
   }, [])
 
-  async function handleSubmit(values) {
+  async function handleRegistrationSubmit(values) {
     setSubmitting(true)
     setError(null)
 
     const eids = [values.eid_1, values.eid_2, values.eid_3, values.eid_4]
-      .filter((e) => e) // Filter out empty values
+      .filter((e) => e)
       .map((e) => e.trim())
 
-    // Application-level duplicate check for a fast, friendly error message.
-    // The real guard is the UNIQUE constraint on ss_team_members.eid, which
-    // also covers the race where two people register at the same instant.
     if (new Set(eids).size !== eids.length) {
       setError('The same Employee ID was entered more than once for this team.')
       setSubmitting(false)
@@ -92,21 +89,20 @@ export default function RegistrationTab() {
         .select('game_name')
         .in('team_id', teamIds)
 
-      const sameGameRegistrations = teamGameData?.filter(t => t.game_name === values.game_name) || []
+      const sameGameRegistrations = teamGameData?.filter(t => t.game_name === selectedGame) || []
       if (sameGameRegistrations.length > 0) {
-        setError(`One or more Employee IDs are already registered for ${values.game_name}. You can register for a different game.`)
+        setError(`One or more Employee IDs are already registered for ${selectedGame}. You can register for a different game.`)
         setSubmitting(false)
         return
       }
     }
 
-    // Insert the team, retrying on the rare team_id collision.
     let team = null
     for (let attempt = 0; attempt < MAX_TEAM_ID_ATTEMPTS && !team; attempt++) {
       const team_id = generateTeamId()
       const { data, error: insertError } = await supabase
         .from('ss_teams')
-        .insert({ team_id, team_name: values.team_name.trim(), game_name: values.game_name })
+        .insert({ team_id, team_name: values.team_name.trim(), game_name: selectedGame })
         .select()
         .single()
 
@@ -115,12 +111,10 @@ export default function RegistrationTab() {
         break
       }
       if (insertError.code !== '23505') {
-        // Not a collision on team_id -- a real error, stop retrying.
         setError(`Registration failed: ${insertError.message}`)
         setSubmitting(false)
         return
       }
-      // 23505 = unique_violation -> team_id collision, loop and try a new code.
     }
 
     if (!team) {
@@ -134,8 +128,6 @@ export default function RegistrationTab() {
       .insert(eids.map((eid) => ({ team_id: team.team_id, eid })))
 
     if (membersError) {
-      // Roll back the team row so we don't leave an orphaned team with no members
-      // (most likely cause here: an EID slipped past the pre-check via a race).
       await supabase.from('ss_teams').delete().eq('team_id', team.team_id)
       setError(
         membersError.code === '23505'
@@ -146,10 +138,9 @@ export default function RegistrationTab() {
       return
     }
 
-    setRegisteredTeam({ team_id: team.team_id, team_name: team.team_name, game_name: team.game_name })
+    setRegisteredTeam({ team_id: team.team_id, team_name: team.team_name, game_name: selectedGame })
     setSubmitting(false)
     form.resetFields()
-    setSelectedGame(null)
   }
 
   const handleDownloadQR = () => {
@@ -191,7 +182,11 @@ export default function RegistrationTab() {
           </div>
           <Space style={{ width: '100%', justifyContent: 'center', gap: '12px', flexDirection: 'row', marginTop: 32 }}>
             <Button
-              onClick={() => setRegisteredTeam(null)}
+              onClick={() => {
+                setRegisteredTeam(null)
+                setStep('gameSelection')
+                setSelectedGame(null)
+              }}
               size="large"
               style={{ minWidth: '120px' }}
             >
@@ -212,60 +207,111 @@ export default function RegistrationTab() {
     )
   }
 
+  if (step === 'gameSelection') {
+    return (
+      <Card style={{ maxWidth: 600, margin: '0 auto', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+        <Title level={4} style={{ marginBottom: 32, textAlign: 'center' }}>Select a game to play</Title>
+
+        {error && (
+          <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} closable onClose={() => setError(null)} />
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: 32 }}>
+          {games.map((game) => (
+            <div
+              key={game.name}
+              onClick={() => {
+                setSelectedGame(game.name)
+                setStep('teamRegistration')
+                form.resetFields()
+              }}
+              style={{
+                padding: '20px',
+                border: '1px solid #e0e0e0',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                display: 'flex',
+                gap: '16px',
+                alignItems: 'flex-start',
+                transition: 'all 0.2s',
+                ':hover': { backgroundColor: '#f5f5f5' }
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#f5f5f5'
+                e.currentTarget.style.borderColor = '#d9d9d9'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.borderColor = '#e0e0e0'
+              }}
+            >
+              <div style={{ flex: 1 }}>
+                <Title level={5} style={{ marginBottom: 8, marginTop: 0 }}>{game.name}</Title>
+                <Text type="secondary" style={{ fontSize: '13px' }}>Click to select this game</Text>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Button
+          type="primary"
+          size="large"
+          block
+          disabled={!selectedGame}
+        >
+          Proceed
+        </Button>
+      </Card>
+    )
+  }
+
   return (
     <Card style={{ maxWidth: 600, margin: '0 auto', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-      <Title level={4} style={{ marginBottom: 32 }}>Register team</Title>
+      <Title level={4} style={{ marginBottom: 24 }}>Register team</Title>
 
       {error && (
         <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} closable onClose={() => setError(null)} />
       )}
 
-      <div style={{ marginBottom: 32 }}>
-        <Title level={5} style={{ marginBottom: 16 }}>Select a game to play</Title>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-          {games.map((game, idx) => (
-            <div
-              key={game.name}
-              onClick={() => {
-                setSelectedGame(game.name)
-                form.setFieldValue('game_name', game.name)
-              }}
-              style={{
-                padding: '16px',
-                border: selectedGame === game.name ? `2px solid ${getGameColor(game.name, games).border}` : '1px solid #e0e0e0',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                backgroundColor: selectedGame === game.name ? getGameColor(game.name, games).bg : '#fff',
-                transition: 'all 0.2s'
-              }}
-            >
-              <div style={{ fontSize: '16px', fontWeight: 'bold' }}>{game.name}</div>
-            </div>
-          ))}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: 32, paddingBottom: 16, borderBottom: '1px solid #e0e0e0' }}>
+        <div style={{
+          width: 32,
+          height: 32,
+          borderRadius: '50%',
+          backgroundColor: '#e6f7ff',
+          border: '2px solid #1890ff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '14px',
+          fontWeight: 'bold',
+          color: '#1890ff'
+        }}>
+          2
+        </div>
+        <div>
+          <Title level={5} style={{ margin: 0, marginBottom: 4 }}>{selectedGame}</Title>
+          <Text type="secondary" style={{ fontSize: '12px' }}>Selected game</Text>
         </div>
       </div>
 
-      <Form form={form} layout="vertical" onFinish={handleSubmit} disabled={submitting}>
-        <Form.Item name="game_name" hidden>
-          <Input />
-        </Form.Item>
+      <div style={{ backgroundColor: '#fafafa', padding: '12px 16px', borderRadius: '4px', marginBottom: '24px' }}>
+        <Text type="secondary" style={{ fontSize: '13px' }}>
+          <ul style={{ margin: '0', paddingLeft: '20px', marginLeft: '0' }}>
+            <li>Minimum 3 player required to play.</li>
+            <li>All Employee ID must be unique across every team.</li>
+          </ul>
+        </Text>
+      </div>
 
+      <Form form={form} layout="vertical" onFinish={handleRegistrationSubmit} disabled={submitting}>
         <Form.Item
           name="team_name"
           label="* Team Name"
-          rules={validationEnabled ? [{ required: true, message: 'Team name is required' }] : []}
+          rules={[{ required: true, message: 'Team name is required' }]}
         >
           <Input placeholder="e.g. The Sprinters" />
         </Form.Item>
-
-        <div style={{ backgroundColor: '#fafafa', padding: '12px 16px', borderRadius: '4px', marginBottom: '16px' }}>
-          <Text type="secondary" style={{ fontSize: '13px' }}>
-            <ul style={{ margin: '0', paddingLeft: '20px', marginLeft: '0' }}>
-              <li>Minimum 3 player required to play.</li>
-              <li>All Employee ID must be unique across every team.</li>
-            </ul>
-          </Text>
-        </div>
 
         {[1, 2, 3, 4].map((n) => {
           const isRequired = n !== 4
@@ -275,7 +321,7 @@ export default function RegistrationTab() {
               key={n}
               name={`eid_${n}`}
               label={label}
-              rules={validationEnabled ? [
+              rules={[
                 {
                   required: isRequired,
                   message: 'Field Required',
@@ -284,7 +330,7 @@ export default function RegistrationTab() {
                   pattern: /^.\d{6}$/,
                   message: 'Employee ID must be in this format "I7XXXXX"',
                 },
-              ] : []}
+              ]}
             >
               <Input placeholder={`SID: I000000`} />
             </Form.Item>
@@ -292,9 +338,17 @@ export default function RegistrationTab() {
         })}
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" loading={submitting} block size="large">
-            Submit
-          </Button>
+          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+            <Button
+              onClick={() => setStep('gameSelection')}
+              size="large"
+            >
+              Back
+            </Button>
+            <Button type="primary" htmlType="submit" loading={submitting} size="large">
+              Submit
+            </Button>
+          </Space>
         </Form.Item>
       </Form>
     </Card>
