@@ -4,6 +4,7 @@ import { QRCodeCanvas } from 'qrcode.react'
 import html2canvas from 'html2canvas'
 import { supabase } from '../lib/supabaseClient'
 import { generateTeamId } from '../utils/teamId'
+import { getGameImage } from '../utils/gameImages'
 
 const { Title, Text } = Typography
 
@@ -252,9 +253,16 @@ export default function RegistrationTab() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: '32px',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  overflow: 'hidden'
                 }}>
-                  🎮
+                  {getGameImage(game.name) ? (
+                    <img
+                      src={getGameImage(game.name)}
+                      alt={game.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : '🎮'}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: 4 }}>{game.name}</div>
@@ -311,9 +319,16 @@ export default function RegistrationTab() {
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '32px',
-          flexShrink: 0
+          flexShrink: 0,
+          overflow: 'hidden'
         }}>
-          🎮
+          {getGameImage(selectedGame) ? (
+            <img
+              src={getGameImage(selectedGame)}
+              alt={selectedGame}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : '🎮'}
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: 4 }}>{selectedGame}</div>

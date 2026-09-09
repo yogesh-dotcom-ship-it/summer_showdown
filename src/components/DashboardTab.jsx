@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Row, Col, Card, Typography, Empty, Spin } from 'antd'
 import { supabase } from '../lib/supabaseClient'
+import { getGameImage } from '../utils/gameImages'
 
 const { Title, Text } = Typography
 
@@ -129,9 +130,16 @@ export default function DashboardTab() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '24px',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    overflow: 'hidden'
                   }}>
-                    🎮
+                    {getGameImage(game.name) ? (
+                      <img
+                        src={getGameImage(game.name)}
+                        alt={game.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : '🎮'}
                   </div>
                   <Title level={5} style={{ margin: 0 }}>{game.name}</Title>
                 </div>
