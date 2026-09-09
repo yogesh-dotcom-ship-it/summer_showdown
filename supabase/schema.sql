@@ -41,13 +41,6 @@ create table if not exists ss_teams (
 create index if not exists ss_teams_game_status_idx on ss_teams (game_name, status);
 create index if not exists ss_teams_game_completion_idx on ss_teams (game_name, completion_time);
 
--- Team names must be unique across every team, regardless of game --
--- enforced case-insensitively so "The Sprinters" and "the sprinters"
--- count as a collision, matching the app-level check in
--- RegistrationTab.jsx.
-create unique index if not exists ss_teams_team_name_lower_key
-  on ss_teams (lower(team_name));
-
 -- ---------------------------------------------------------------------------
 -- 3. Team members table (normalized EIDs)
 --    unique(eid, game_name) prevents one person being registered twice for

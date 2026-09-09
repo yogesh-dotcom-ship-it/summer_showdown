@@ -30,24 +30,6 @@ function getTableNumber(gameName, games) {
   return gameIndex >= 0 ? gameIndex + 1 : 1
 }
 
-// Suggests free variations of a taken team name -- numbered suffixes first
-// (closest to what the user typed), then a couple of adjective prefixes as
-// a fallback if even those are somehow taken too. Checked one at a time
-// against existingNamesLower so every suggestion returned is actually free.
-async function suggestTeamNames(baseName, existingNamesLower) {
-  const trimmed = baseName.trim()
-  const candidates = [
-    `${trimmed} 2`,
-    `${trimmed} II`,
-    `${trimmed} Jr`,
-    `The New ${trimmed}`,
-    `${trimmed} Squad`,
-    `${trimmed} Crew`,
-  ]
-  const free = candidates.filter((c) => !existingNamesLower.has(c.toLowerCase()))
-  return free.slice(0, 3)
-}
-
 const MAX_TEAM_ID_ATTEMPTS = 5
 
 export default function RegistrationTab() {
@@ -59,7 +41,6 @@ export default function RegistrationTab() {
   const [selectedGame, setSelectedGame] = useState(null)
   const [step, setStep] = useState('gameSelection') // 'gameSelection' or 'teamRegistration'
   const [downloading, setDownloading] = useState(false)
-  const [nameSuggestions, setNameSuggestions] = useState([])
   const successCardRef = useRef(null)
 
   useEffect(() => {
@@ -84,34 +65,6 @@ export default function RegistrationTab() {
   async function handleRegistrationSubmit(values) {
     setSubmitting(true)
     setError(null)
-    setNameSuggestions([])
-
-    const teamName = values.team_name.trim()
-
-    // Team names must be unique across every team, regardless of game. The
-    // real guard is the unique index on lower(team_name) in the database --
-    // this is a friendlier pre-check that also offers alternative names.
-    const { data: nameClash, error: nameLookupError } = await supabase
-      .from('ss_teams')
-      .select('team_name')
-      .ilike('team_name', teamName)
-      .maybeSingle()
-
-    if (nameLookupError) {
-      setError('Could not validate the team name. Please try again.')
-      setSubmitting(false)
-      return
-    }
-
-    if (nameClash) {
-      const { data: allTeams } = await supabase.from('ss_teams').select('team_name')
-      const existingNamesLower = new Set((allTeams ?? []).map((t) => t.team_name.toLowerCase()))
-      const suggestions = await suggestTeamNames(teamName, existingNamesLower)
-      setNameSuggestions(suggestions)
-      setError(`Team name "${teamName}" is already taken. Please choose a different name.`)
-      setSubmitting(false)
-      return
-    }
 
     const eids = [values.eid_1, values.eid_2, values.eid_3, values.eid_4]
       .filter((e) => e)
@@ -152,7 +105,7 @@ export default function RegistrationTab() {
       const team_id = generateTeamId()
       const { data, error: insertError } = await supabase
         .from('ss_teams')
-        .insert({ team_id, team_name: teamName, game_name: selectedGame })
+        .insert({ team_id, team_name: values.team_name.trim(), game_name: selectedGame })
         .select()
         .single()
 
@@ -160,20 +113,11 @@ export default function RegistrationTab() {
         team = data
         break
       }
-      // 23505 = unique_violation, but it could be team_id (retry with a new
-      // code) OR team_name (someone just took it -- retrying won't help,
-      // since we'd keep inserting the same taken name).
-      if (insertError.code === '23505' && insertError.message?.includes('team_name')) {
-        setError(`Team name "${teamName}" was just taken by someone else. Please choose a different name.`)
-        setSubmitting(false)
-        return
-      }
       if (insertError.code !== '23505') {
         setError(`Registration failed: ${insertError.message}`)
         setSubmitting(false)
         return
       }
-      // Otherwise: team_id collision, loop and try a new code.
     }
 
     if (!team) {
@@ -354,39 +298,7 @@ export default function RegistrationTab() {
       <Title level={4} style={{ marginBottom: 20 }}>Register team</Title>
 
       {error && (
-        <Alert
-          type="error"
-          showIcon
-          message={error}
-          description={
-            nameSuggestions.length > 0 ? (
-              <div style={{ marginTop: 8 }}>
-                <Text style={{ fontSize: '13px' }}>Try one of these instead:</Text>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: 6 }}>
-                  {nameSuggestions.map((suggestion) => (
-                    <Button
-                      key={suggestion}
-                      size="small"
-                      onClick={() => {
-                        form.setFieldValue('team_name', suggestion)
-                        setError(null)
-                        setNameSuggestions([])
-                      }}
-                    >
-                      {suggestion}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ) : null
-          }
-          style={{ marginBottom: 16 }}
-          closable
-          onClose={() => {
-            setError(null)
-            setNameSuggestions([])
-          }}
-        />
+        <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} closable onClose={() => setError(null)} />
       )}
 
       <div style={{
