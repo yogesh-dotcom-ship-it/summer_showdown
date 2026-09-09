@@ -4,6 +4,7 @@ import { MenuOutlined } from '@ant-design/icons'
 import RegistrationTab from './components/RegistrationTab'
 import ScanTab from './components/ScanTab'
 import DashboardTab from './components/DashboardTab'
+import AdminTab from './components/AdminTab'
 
 const { Header, Content } = Layout
 const { Title } = Typography
@@ -16,6 +17,7 @@ function App() {
     { key: 'register', label: 'Registration' },
     { key: 'scan', label: 'Scan QR' },
     { key: 'dashboard', label: 'Dashboard' },
+    { key: 'admin', label: 'Admin' },
   ]
 
   const handleMenuClick = (key) => {
@@ -31,6 +33,8 @@ function App() {
         return <ScanTab />
       case 'dashboard':
         return <DashboardTab />
+      case 'admin':
+        return <AdminTab />
       default:
         return <RegistrationTab />
     }

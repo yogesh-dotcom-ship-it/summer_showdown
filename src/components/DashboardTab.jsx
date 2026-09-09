@@ -93,8 +93,7 @@ export default function DashboardTab() {
   return (
     <div style={{ padding: '0' }}>
       <div style={{ marginBottom: '32px' }}>
-        <Title level={2} style={{ marginBottom: '8px' }}>Summer Showdown Leaderboard</Title>
-        <Text type="secondary">Track team performance across all games</Text>
+        <Title level={2} style={{ marginBottom: '8px' }}>Leaderboard</Title>
       </div>
 
       <Row gutter={[24, 24]}>
@@ -123,9 +122,8 @@ export default function DashboardTab() {
           return (
             <Col xs={24} md={12} lg={8} key={game.name}>
               <Card style={{ height: '700px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                  <Title level={3} style={{ marginBottom: '4px' }}>{game.name}</Title>
-                  <Text type="secondary" style={{ fontSize: '12px' }}>Game Leaderboard</Text>
+                <div style={{ textAlign: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #e0e0e0' }}>
+                  <Title level={3} style={{ marginBottom: '0' }}>{game.name}</Title>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -188,11 +186,11 @@ export default function DashboardTab() {
                 </div>
 
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <Title level={5} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', marginTop: '12px', margin: '12px 0 16px 0' }}>
-                    <ClockCircleOutlined /> Waiting ({nextTurn.length})
+                  <Title level={5} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '24px', marginBottom: '16px', fontSize: '14px', fontWeight: '600' }}>
+                    In Queue ({nextTurn.length})
                   </Title>
                   {nextTurn.length === 0 ? (
-                    <Text type="secondary" style={{ fontSize: '12px' }}>No teams waiting</Text>
+                    <Text type="secondary" style={{ fontSize: '12px' }}>No teams in queue</Text>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflow: 'auto' }}>
                       {nextTurn.map((t, i) => (
@@ -203,11 +201,12 @@ export default function DashboardTab() {
                           padding: '10px 12px',
                           backgroundColor: t.status === 'in_progress' ? '#e6f7ff' : '#fafafa',
                           borderRadius: '6px',
-                          borderLeft: t.status === 'in_progress' ? '3px solid #1890ff' : 'none'
+                          borderLeft: t.status === 'in_progress' ? '3px solid #1890ff' : 'none',
+                          fontSize: '13px'
                         }}>
-                          <span style={{ fontSize: '13px', fontWeight: '500' }}>{t.team_name}</span>
-                          <Tag color={t.status === 'in_progress' ? 'processing' : 'default'} style={{ fontSize: '11px' }}>
-                            {t.status === 'in_progress' ? 'Running' : 'Waiting'}
+                          <span style={{ fontWeight: i === 0 ? '600' : '400' }}>{t.team_name}</span>
+                          <Tag color={t.status === 'in_progress' ? 'processing' : 'default'} style={{ fontSize: '11px', margin: 0 }}>
+                            {t.status === 'in_progress' ? 'Playing' : (i === 0 ? 'Next' : 'In queue')}
                           </Tag>
                         </div>
                       ))}
