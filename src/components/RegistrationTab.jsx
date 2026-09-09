@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Form, Input, Button, Card, Alert, Space, Typography } from 'antd'
 import { QRCodeCanvas } from 'qrcode.react'
+import html2canvas from 'html2canvas'
 import { supabase } from '../lib/supabaseClient'
 import { generateTeamId } from '../utils/teamId'
 
@@ -30,7 +31,8 @@ export default function RegistrationTab() {
   const [registeredTeam, setRegisteredTeam] = useState(null)
   const [selectedGame, setSelectedGame] = useState(null)
   const [step, setStep] = useState('gameSelection') // 'gameSelection' or 'teamRegistration'
-  const qrRef = useRef(null)
+  const [downloading, setDownloading] = useState(false)
+  const successCardRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -135,13 +137,20 @@ export default function RegistrationTab() {
     form.resetFields()
   }
 
-  const handleDownloadQR = () => {
-    const canvas = qrRef.current?.querySelector('canvas')
-    if (canvas) {
+  const handleDownloadQR = async () => {
+    if (!successCardRef.current) return
+    setDownloading(true)
+    try {
+      const canvas = await html2canvas(successCardRef.current, {
+        backgroundColor: null,
+        scale: 2,
+      })
       const link = document.createElement('a')
       link.href = canvas.toDataURL('image/png')
-      link.download = `${registeredTeam.team_name}_QR.png`
+      link.download = `${registeredTeam.team_name}_registration.png`
       link.click()
+    } finally {
+      setDownloading(false)
     }
   }
 
@@ -156,20 +165,22 @@ export default function RegistrationTab() {
         backgroundColor: gameColor.bg
       }}>
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
-          <div style={{ fontSize: '22px', marginBottom: 8 }}>✅</div>
-          <Title level={3} style={{ marginBottom: 20, marginTop: 0 }}>
-            Registration successful
-          </Title>
-          <div style={{ marginBottom: 24, fontSize: '14px' }}>
-            <span>Show this QR code to&nbsp;: </span>
-            <span style={{ fontSize: '18px', fontWeight: 600 }}>Table no. 01</span>
-          </div>
-          <div style={{ marginBottom: 32 }}>
-            <div ref={qrRef} style={{ display: 'inline-block' }}>
-              <QRCodeCanvas value={registeredTeam.team_id} size={240} includeMargin level="H" />
+          <div ref={successCardRef} style={{ backgroundColor: gameColor.bg, padding: '8px' }}>
+            <div style={{ fontSize: '22px', marginBottom: 8 }}>✅</div>
+            <Title level={3} style={{ marginBottom: 20, marginTop: 0 }}>
+              Registration successful
+            </Title>
+            <div style={{ marginBottom: 24, fontSize: '14px' }}>
+              <span>Show this QR code to&nbsp;: </span>
+              <span style={{ fontSize: '18px', fontWeight: 600 }}>Table no. 01</span>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <div style={{ display: 'inline-block' }}>
+                <QRCodeCanvas value={registeredTeam.team_id} size={240} includeMargin level="H" />
+              </div>
             </div>
           </div>
-          <Space style={{ width: '100%', justifyContent: 'center', gap: '12px' }}>
+          <Space style={{ width: '100%', justifyContent: 'center', gap: '12px', marginTop: 24 }}>
             <Button
               onClick={() => {
                 setRegisteredTeam(null)
@@ -184,6 +195,7 @@ export default function RegistrationTab() {
             <Button
               type="primary"
               onClick={handleDownloadQR}
+              loading={downloading}
               size="large"
               style={{ minWidth: '110px' }}
             >
