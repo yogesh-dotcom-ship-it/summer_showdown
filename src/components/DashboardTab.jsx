@@ -1,11 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Row, Col, Card, List, Typography, Tag, Empty, Spin, Table } from 'antd'
-import { TrophyOutlined, ClockCircleOutlined, CrownOutlined } from '@ant-design/icons'
+import { Row, Col, Card, Typography, Empty, Spin } from 'antd'
 import { supabase } from '../lib/supabaseClient'
 
 const { Title, Text } = Typography
-
-const TOP_N = 5
 
 const GAME_COLORS = [
   { bg: '#fffbe6', border: '#faad14' }, // Yellow
@@ -121,93 +118,60 @@ export default function DashboardTab() {
 
           return (
             <Col xs={24} md={12} lg={8} key={game.name}>
-              <Card style={{ height: '700px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ textAlign: 'center', marginBottom: '24px', paddingBottom: '16px', borderBottom: '1px solid #e0e0e0' }}>
-                  <Title level={3} style={{ marginBottom: '0' }}>{game.name}</Title>
+              <Card style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} styles={{ body: { padding: '16px' } }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: '8px',
+                    backgroundColor: gameColor.bg,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '24px',
+                    flexShrink: 0
+                  }}>
+                    🎮
+                  </div>
+                  <Title level={5} style={{ margin: 0 }}>{game.name}</Title>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{
+                  backgroundColor: gameColor.bg,
+                  borderRadius: '8px',
+                  padding: '14px 16px',
+                  marginBottom: '16px'
+                }}>
+                  <Text style={{ fontSize: '12px', color: '#8c8c8c', display: 'block', marginBottom: '8px' }}>Least time</Text>
                   {podiumTeams.length > 0 ? (
-                    <>
-                      {podiumTeams[0] ? (
-                        <div style={{
-                          backgroundColor: gameColor.bg,
-                          borderLeft: `4px solid ${gameColor.border}`,
-                          padding: '16px 20px',
-                          borderRadius: '8px',
-                          marginBottom: '16px',
-                          display: 'flex',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          gap: '12px',
-                          flexWrap: 'wrap',
-                          minHeight: '60px',
-                          '@media (max-width: 768px)': {
-                            justifyContent: 'center'
-                          }
-                        }}>
-                          <div style={{ fontSize: '32px', order: 1, flex: window.innerWidth < 768 ? '1 1 100%' : '0 0 auto', textAlign: 'center' }}>🥇</div>
-                          <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#000', flex: window.innerWidth < 768 ? '1 1 100%' : '1 1 auto', minWidth: '150px', order: 2, textAlign: 'center' }}>
-                            {podiumTeams[0].team_name}
-                          </div>
-                          <div style={{ fontSize: '20px', color: '#000', fontWeight: '600', order: 3, flex: window.innerWidth < 768 ? '1 1 100%' : '0 0 auto', textAlign: 'center', marginLeft: window.innerWidth < 768 ? '0' : 'auto' }}>
-                            {formatTime(podiumTeams[0].completion_time)}
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{
-                          backgroundColor: '#f5f5f5',
-                          padding: '16px 20px',
-                          borderRadius: '8px',
-                          marginBottom: '16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          height: '60px'
-                        }}>
-                          <Text style={{ fontSize: '16px', color: '#999' }}>No winner yet</Text>
-                        </div>
-                      )}
-
-                    </>
-                  ) : (
-                    <div style={{
-                      backgroundColor: '#f5f5f5',
-                      padding: '16px 20px',
-                      borderRadius: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <Text style={{ fontSize: '16px', color: '#999' }}>No winner yet</Text>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>🥇</span>
+                      <span style={{ fontSize: '14px', fontWeight: 600, flex: 1 }}>{podiumTeams[0].team_name}</span>
+                      <span style={{ fontSize: '14px', fontWeight: 600 }}>{formatTime(podiumTeams[0].completion_time)}</span>
                     </div>
+                  ) : (
+                    <Text style={{ fontSize: '13px', color: '#8c8c8c' }}>No winner yet</Text>
                   )}
                 </div>
 
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <Title level={5} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '24px', marginBottom: '16px', fontSize: '14px', fontWeight: '600' }}>
-                    In Queue ({nextTurn.length})
-                  </Title>
+                <div>
+                  <Text style={{ fontSize: '12px', color: '#8c8c8c', display: 'block', marginBottom: '8px' }}>In Queue</Text>
                   {nextTurn.length === 0 ? (
                     <Text type="secondary" style={{ fontSize: '12px' }}>No teams in queue</Text>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflow: 'auto' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
                       {nextTurn.map((t, i) => (
                         <div key={t.team_id} style={{
                           display: 'flex',
                           justifyContent: 'space-between',
                           alignItems: 'center',
-                          padding: '10px 12px',
-                          backgroundColor: t.status === 'in_progress' ? '#e6f7ff' : '#fafafa',
-                          borderRadius: '6px',
-                          borderLeft: t.status === 'in_progress' ? '3px solid #1890ff' : 'none',
+                          padding: '8px 0',
                           fontSize: '13px'
                         }}>
-                          <span style={{ fontWeight: i === 0 ? '600' : '400' }}>{t.team_name}</span>
-                          <Tag color={t.status === 'in_progress' ? 'processing' : 'default'} style={{ fontSize: '11px', margin: 0 }}>
+                          <span>{t.team_name}</span>
+                          <span style={{ color: t.status === 'in_progress' ? '#1677ff' : (i === 0 ? '#fa8c16' : '#8c8c8c'), fontSize: '12px' }}>
                             {t.status === 'in_progress' ? 'Playing' : (i === 0 ? 'Next' : 'In queue')}
-                          </Tag>
+                          </span>
                         </div>
                       ))}
                     </div>

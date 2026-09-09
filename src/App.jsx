@@ -15,9 +15,9 @@ function App() {
 
   const menuItems = [
     { key: 'register', label: 'Registration' },
-    { key: 'scan', label: 'Scan QR' },
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'admin', label: 'Admin' },
+    { key: 'scan', label: 'Start game' },
+    { key: 'dashboard', label: 'Leaderboard' },
+    { key: 'admin', label: 'Dashboard' },
   ]
 
   const handleMenuClick = (key) => {
@@ -58,15 +58,18 @@ function App() {
         </Header>
 
         <Drawer
-          title="Menu"
           placement="left"
           onClose={() => setDrawerOpen(false)}
           open={drawerOpen}
+          closeIcon={<span style={{ fontSize: 18 }}>✕</span>}
+          width={240}
+          styles={{ header: { padding: '16px 20px', borderBottom: 'none' }, body: { padding: 0 } }}
         >
           <Menu
             items={menuItems}
             onClick={(e) => handleMenuClick(e.key)}
             selectedKeys={[currentPage]}
+            style={{ border: 'none' }}
           />
         </Drawer>
 

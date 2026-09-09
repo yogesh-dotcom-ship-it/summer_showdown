@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Card, Alert, Typography, Descriptions, Button, Tag, Popconfirm, Space } from 'antd'
+import { Card, Alert, Typography, Button, Popconfirm, Space } from 'antd'
 import { Html5Qrcode } from 'html5-qrcode'
 import { supabase } from '../lib/supabaseClient'
 import Stopwatch from './Stopwatch'
@@ -176,18 +176,37 @@ export default function ScanTab() {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         ...(team && gameColor ? { backgroundColor: gameColor.bg } : {})
       }}>
-        <Title level={4}>Scan Team QR Code</Title>
-
         {!team && (
-          <>
-            {scanError && <Alert type="error" showIcon message={scanError} style={{ marginBottom: 16 }} />}
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            {scanError && <Alert type="error" showIcon message={scanError} style={{ marginBottom: 16, textAlign: 'left' }} />}
             {lookupError && (
-              <Alert type="warning" showIcon message={lookupError} style={{ marginBottom: 16 }} />
+              <Alert type="warning" showIcon message={lookupError} style={{ marginBottom: 16, textAlign: 'left' }} />
             )}
             {!scanning ? (
-              <Button type="primary" size="large" onClick={() => { reset(); setScanning(true) }}>
-                Start Scanning
-              </Button>
+              <>
+                <div style={{ fontSize: '160px', lineHeight: 1, marginBottom: 32, color: '#8dbde8' }}>
+                  <svg width="180" height="180" viewBox="0 0 180 180" fill="none" style={{ margin: '0 auto' }}>
+                    <rect x="10" y="10" width="50" height="50" fill="#8dbde8"/>
+                    <rect x="120" y="10" width="50" height="50" fill="#8dbde8"/>
+                    <rect x="10" y="120" width="50" height="50" fill="#8dbde8"/>
+                    <rect x="25" y="25" width="20" height="20" fill="#fff"/>
+                    <rect x="135" y="25" width="20" height="20" fill="#fff"/>
+                    <rect x="25" y="135" width="20" height="20" fill="#fff"/>
+                    <rect x="75" y="10" width="15" height="15" fill="#8dbde8"/>
+                    <rect x="100" y="30" width="15" height="15" fill="#8dbde8"/>
+                    <rect x="75" y="50" width="15" height="15" fill="#8dbde8"/>
+                    <rect x="120" y="75" width="15" height="15" fill="#8dbde8"/>
+                    <rect x="150" y="95" width="15" height="15" fill="#8dbde8"/>
+                    <rect x="75" y="100" width="15" height="15" fill="#8dbde8"/>
+                    <rect x="95" y="120" width="15" height="15" fill="#8dbde8"/>
+                    <rect x="75" y="150" width="15" height="15" fill="#8dbde8"/>
+                    <rect x="120" y="140" width="30" height="30" fill="#8dbde8"/>
+                  </svg>
+                </div>
+                <Button type="primary" size="large" onClick={() => { reset(); setScanning(true) }} style={{ minWidth: 220 }}>
+                  Scan QR to start
+                </Button>
+              </>
             ) : (
               <>
                 <div id={SCANNER_ELEMENT_ID} style={{ width: '100%' }} />
@@ -200,7 +219,7 @@ export default function ScanTab() {
                 </Button>
               </>
             )}
-          </>
+          </div>
         )}
 
         {team && !passwordVerified && (
@@ -216,20 +235,24 @@ export default function ScanTab() {
 
         {team && passwordVerified && (
           <>
-            <div style={{ marginBottom: 24 }}>
-              <Title level={5} style={{ marginBottom: 8, fontSize: '14px', fontWeight: '600' }}>
+            <div style={{ marginBottom: 16 }}>
+              <Title level={4} style={{ marginBottom: 4, marginTop: 0 }}>
                 {team.game_name}
               </Title>
-              <Title level={5} style={{ marginBottom: 8, fontSize: '14px', fontWeight: '600' }}>
+              <Text style={{ fontSize: '13px', color: '#595959' }}>
                 Team name : {team.team_name}
-              </Title>
-              <div style={{ lineHeight: '1.8' }}>
+              </Text>
+              <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {members.map((eid, idx) => (
-                  <div key={idx}>
-                    Player {String(idx + 1).padStart(2, '0')}
-                    <br />
+                  <span key={idx} style={{
+                    padding: '4px 12px',
+                    border: '1px solid #d9d9d9',
+                    borderRadius: '16px',
+                    fontSize: '12px',
+                    backgroundColor: '#fff'
+                  }}>
                     {eid}
-                  </div>
+                  </span>
                 ))}
               </div>
             </div>

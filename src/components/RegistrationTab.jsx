@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { Form, Input, Button, Card, Alert, Space, Typography } from 'antd'
 import { QRCodeCanvas } from 'qrcode.react'
-import { DownloadOutlined } from '@ant-design/icons'
 import { supabase } from '../lib/supabaseClient'
 import { generateTeamId } from '../utils/teamId'
 
@@ -150,33 +149,29 @@ export default function RegistrationTab() {
   }
 
   if (registeredTeam) {
-    const gameColor = getGameColor(registeredTeam.game_name, games)
     return (
       <Card style={{
         maxWidth: 600,
         margin: '0 auto',
         borderRadius: '12px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        backgroundColor: gameColor.bg,
-        padding: '40px 24px'
+        backgroundColor: '#fdf6d8'
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ marginBottom: 24 }}>
-            <span style={{ fontSize: '32px' }}>✅</span>
-          </div>
-          <Title level={2} style={{ marginBottom: 24 }}>
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          <div style={{ fontSize: '22px', marginBottom: 8 }}>✅</div>
+          <Title level={3} style={{ marginBottom: 20, marginTop: 0 }}>
             Registration successful
           </Title>
-          <div style={{ marginBottom: 32, fontSize: '16px' }}>
-            <span>Show this QR code to : </span>
-            <strong style={{ fontSize: '20px' }}>Table no. 01</strong>
+          <div style={{ marginBottom: 24, fontSize: '14px' }}>
+            <span>Show this QR code to&nbsp;: </span>
+            <span style={{ fontSize: '18px', fontWeight: 600 }}>Table no. 01</span>
           </div>
-          <div style={{ marginBottom: 24, padding: '16px', backgroundColor: '#fff', borderRadius: '8px', display: 'inline-block' }}>
-            <div ref={qrRef}>
+          <div style={{ marginBottom: 32 }}>
+            <div ref={qrRef} style={{ display: 'inline-block' }}>
               <QRCodeCanvas value={registeredTeam.team_id} size={240} includeMargin level="H" />
             </div>
           </div>
-          <Space style={{ width: '100%', justifyContent: 'center', gap: '12px', flexDirection: 'row', marginTop: 32 }}>
+          <Space style={{ width: '100%', justifyContent: 'center', gap: '12px' }}>
             <Button
               onClick={() => {
                 setRegisteredTeam(null)
@@ -184,16 +179,15 @@ export default function RegistrationTab() {
                 setSelectedGame(null)
               }}
               size="large"
-              style={{ minWidth: '120px' }}
+              style={{ minWidth: '110px' }}
             >
               Close
             </Button>
             <Button
               type="primary"
-              icon={<DownloadOutlined />}
               onClick={handleDownloadQR}
               size="large"
-              style={{ minWidth: '120px' }}
+              style={{ minWidth: '110px' }}
             >
               Download QR
             </Button>
@@ -206,47 +200,51 @@ export default function RegistrationTab() {
   if (step === 'gameSelection') {
     return (
       <Card style={{ maxWidth: 600, margin: '0 auto', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-        <Title level={4} style={{ marginBottom: 32, textAlign: 'center' }}>Select a game to play</Title>
+        <Title level={4} style={{ marginBottom: 20 }}>Select a game to play</Title>
 
         {error && (
           <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} closable onClose={() => setError(null)} />
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: 32 }}>
-          {games.map((game) => (
-            <div
-              key={game.name}
-              onClick={() => {
-                setSelectedGame(game.name)
-                setStep('teamRegistration')
-                form.resetFields()
-              }}
-              style={{
-                padding: '20px',
-                border: '1px solid #e0e0e0',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                display: 'flex',
-                gap: '16px',
-                alignItems: 'flex-start',
-                transition: 'all 0.2s',
-                ':hover': { backgroundColor: '#f5f5f5' }
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#f5f5f5'
-                e.currentTarget.style.borderColor = '#d9d9d9'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent'
-                e.currentTarget.style.borderColor = '#e0e0e0'
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <Title level={5} style={{ marginBottom: 8, marginTop: 0 }}>{game.name}</Title>
-                <Text type="secondary" style={{ fontSize: '13px' }}>Click to select this game</Text>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: 24 }}>
+          {games.map((game, idx) => {
+            const isSelected = selectedGame === game.name
+            return (
+              <div
+                key={game.name}
+                onClick={() => setSelectedGame(game.name)}
+                style={{
+                  padding: '12px',
+                  border: isSelected ? '1px solid #1677ff' : '1px solid #e8e8e8',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  gap: '16px',
+                  alignItems: 'center',
+                }}
+              >
+                <div style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: '8px',
+                  backgroundColor: getGameColor(game.name, games).bg,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '32px',
+                  flexShrink: 0
+                }}>
+                  🎮
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: 4 }}>{game.name}</div>
+                  <div style={{ fontSize: '13px', color: '#8c8c8c', lineHeight: '1.4' }}>
+                    {game.description || 'Teams race to complete this challenge.'}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         <Button
@@ -254,6 +252,10 @@ export default function RegistrationTab() {
           size="large"
           block
           disabled={!selectedGame}
+          onClick={() => {
+            setStep('teamRegistration')
+            form.resetFields()
+          }}
         >
           Proceed
         </Button>
@@ -261,41 +263,51 @@ export default function RegistrationTab() {
     )
   }
 
+  const currentGame = games.find(g => g.name === selectedGame)
+
   return (
     <Card style={{ maxWidth: 600, margin: '0 auto', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-      <Title level={4} style={{ marginBottom: 24 }}>Register team</Title>
+      <Title level={4} style={{ marginBottom: 20 }}>Register team</Title>
 
       {error && (
         <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} closable onClose={() => setError(null)} />
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: 32, paddingBottom: 16, borderBottom: '1px solid #e0e0e0' }}>
+      <div style={{
+        padding: '12px',
+        border: '1px solid #e8e8e8',
+        borderRadius: '8px',
+        display: 'flex',
+        gap: '16px',
+        alignItems: 'center',
+        marginBottom: '16px'
+      }}>
         <div style={{
-          width: 32,
-          height: 32,
-          borderRadius: '50%',
-          backgroundColor: '#e6f7ff',
-          border: '2px solid #1890ff',
+          width: 72,
+          height: 72,
+          borderRadius: '8px',
+          backgroundColor: getGameColor(selectedGame, games).bg,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '14px',
-          fontWeight: 'bold',
-          color: '#1890ff'
+          fontSize: '32px',
+          flexShrink: 0
         }}>
-          2
+          🎮
         </div>
-        <div>
-          <Title level={5} style={{ margin: 0, marginBottom: 4 }}>{selectedGame}</Title>
-          <Text type="secondary" style={{ fontSize: '12px' }}>Selected game</Text>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: '15px', fontWeight: 600, marginBottom: 4 }}>{selectedGame}</div>
+          <div style={{ fontSize: '13px', color: '#8c8c8c', lineHeight: '1.4' }}>
+            {currentGame?.description || 'Teams race to complete this challenge.'}
+          </div>
         </div>
       </div>
 
-      <div style={{ backgroundColor: '#fafafa', padding: '12px 16px', borderRadius: '4px', marginBottom: '24px' }}>
-        <Text type="secondary" style={{ fontSize: '13px' }}>
-          <ul style={{ margin: '0', paddingLeft: '20px', marginLeft: '0' }}>
+      <div style={{ backgroundColor: '#f5f5f5', padding: '12px 16px', borderRadius: '4px', marginBottom: '16px' }}>
+        <Text style={{ fontSize: '13px', color: '#595959' }}>
+          <ul style={{ margin: '0', paddingLeft: '16px' }}>
             <li>Minimum 3 player required to play.</li>
-            <li>All Employee ID must be unique across every team.</li>
+            <li>All employee ID must be unique across every team.</li>
           </ul>
         </Text>
       </div>
@@ -303,7 +315,8 @@ export default function RegistrationTab() {
       <Form form={form} layout="vertical" onFinish={handleRegistrationSubmit} disabled={submitting}>
         <Form.Item
           name="team_name"
-          label="* Team Name"
+          label="Team Name"
+          required
           rules={[{ required: true, message: 'Team name is required' }]}
         >
           <Input placeholder="e.g. The Sprinters" />
@@ -311,12 +324,12 @@ export default function RegistrationTab() {
 
         {[1, 2, 3, 4].map((n) => {
           const isRequired = n !== 4
-          const label = isRequired ? `* Player-0${n}` : `Player-0${n}`
           return (
             <Form.Item
               key={n}
               name={`eid_${n}`}
-              label={label}
+              label={`Player-0${n}`}
+              required={isRequired}
               rules={[
                 {
                   required: isRequired,
@@ -328,23 +341,15 @@ export default function RegistrationTab() {
                 },
               ]}
             >
-              <Input placeholder={`SID: I000000`} />
+              <Input placeholder="SID: I000000" />
             </Form.Item>
           )
         })}
 
-        <Form.Item>
-          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-            <Button
-              onClick={() => setStep('gameSelection')}
-              size="large"
-            >
-              Back
-            </Button>
-            <Button type="primary" htmlType="submit" loading={submitting} size="large">
-              Submit
-            </Button>
-          </Space>
+        <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+          <Button type="primary" htmlType="submit" loading={submitting} block size="large">
+            Submit
+          </Button>
         </Form.Item>
       </Form>
     </Card>
