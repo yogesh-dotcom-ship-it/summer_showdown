@@ -21,6 +21,14 @@ function getGameColor(gameName, games) {
   return GAME_COLORS[gameIndex >= 0 ? gameIndex : 0]
 }
 
+// Table numbers follow the same fixed game order as colors -- game 1 is
+// table 1, game 2 is table 2, etc. -- so the assignment stays consistent
+// with the color shown on the same card.
+function getTableNumber(gameName, games) {
+  const gameIndex = games.findIndex(g => g.name === gameName)
+  return gameIndex >= 0 ? gameIndex + 1 : 1
+}
+
 const MAX_TEAM_ID_ATTEMPTS = 5
 
 export default function RegistrationTab() {
@@ -172,7 +180,9 @@ export default function RegistrationTab() {
             </Title>
             <div style={{ marginBottom: 24, fontSize: '14px' }}>
               <span>Show this QR code to&nbsp;: </span>
-              <span style={{ fontSize: '18px', fontWeight: 600 }}>Table no. 01</span>
+              <span style={{ fontSize: '18px', fontWeight: 600 }}>
+                Table no. {String(getTableNumber(registeredTeam.game_name, games)).padStart(2, '0')}
+              </span>
             </div>
             <div style={{ marginBottom: 8 }}>
               <div style={{ display: 'inline-block' }}>
