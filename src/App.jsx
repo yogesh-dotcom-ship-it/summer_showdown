@@ -12,6 +12,10 @@ const { Title } = Typography
 function App() {
   const [currentPage, setCurrentPage] = useState('register')
   const [drawerOpen, setDrawerOpen] = useState(false)
+  // Bumped every time a menu item is clicked, so re-selecting a page
+  // re-mounts it and clears its internal state (e.g. the registration
+  // success screen, which otherwise has no way back to the form).
+  const [navNonce, setNavNonce] = useState(0)
 
   const menuItems = [
     { key: 'register', label: 'Registration' },
@@ -22,21 +26,22 @@ function App() {
 
   const handleMenuClick = (key) => {
     setCurrentPage(key)
+    setNavNonce((n) => n + 1)
     setDrawerOpen(false)
   }
 
   const renderPage = () => {
     switch (currentPage) {
       case 'register':
-        return <RegistrationTab />
+        return <RegistrationTab key={navNonce} />
       case 'scan':
-        return <ScanTab />
+        return <ScanTab key={navNonce} />
       case 'dashboard':
         return <DashboardTab />
       case 'admin':
         return <AdminTab />
       default:
-        return <RegistrationTab />
+        return <RegistrationTab key={navNonce} />
     }
   }
 

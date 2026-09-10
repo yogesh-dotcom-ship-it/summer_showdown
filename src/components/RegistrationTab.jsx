@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Form, Input, Button, Card, Alert, Space, Typography } from 'antd'
+import { Form, Input, Button, Card, Alert, Typography } from 'antd'
 import { QRCodeCanvas } from 'qrcode.react'
 import html2canvas from 'html2canvas'
 import { supabase } from '../lib/supabaseClient'
@@ -179,6 +179,7 @@ export default function RegistrationTab() {
 
   if (registeredTeam) {
     const gameColor = getGameColor(registeredTeam.game_name, games)
+    const tableNo = String(getTableNumber(registeredTeam.game_name, games)).padStart(2, '0')
     return (
       <Card style={{
         maxWidth: 600,
@@ -187,72 +188,55 @@ export default function RegistrationTab() {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
         backgroundColor: gameColor.bg
       }}>
-        <div style={{ textAlign: 'center', padding: '8px 0' }}>
-          <div ref={successCardRef} style={{ backgroundColor: gameColor.bg, padding: '8px' }}>
-            <div style={{ fontSize: '22px', marginBottom: 8 }}>✅</div>
-            <Title level={3} style={{ marginBottom: 20, marginTop: 0 }}>
-              Registration successful
+        <div ref={successCardRef} style={{ textAlign: 'center', backgroundColor: gameColor.bg, padding: '8px' }}>
+          <Title level={3} style={{ marginTop: 0, marginBottom: 20, color: '#389e0d' }}>
+            Registration successful
+          </Title>
+
+          <div style={{ fontSize: '14px', marginBottom: 4 }}>{registeredTeam.game_name}</div>
+          <div style={{ fontSize: '15px', fontWeight: 700 }}>{registeredTeam.team_name}</div>
+          {registeredTeam.eids?.length > 0 && (
+            <div style={{ fontSize: '12px', color: '#595959', marginTop: 2 }}>
+              {registeredTeam.eids.join(' | ')}
+            </div>
+          )}
+
+          <div style={{
+            backgroundColor: 'rgba(0,0,0,0.05)',
+            borderRadius: '8px',
+            padding: '20px 16px',
+            marginTop: 20,
+          }}>
+            <Title level={3} style={{ marginTop: 0, marginBottom: 4 }}>
+              Table no : {tableNo}
             </Title>
-            <div style={{ marginBottom: 24, fontSize: '14px' }}>
-              <span>Show this QR code to&nbsp;: </span>
-              <span style={{ fontSize: '18px', fontWeight: 600 }}>
-                Table no. {String(getTableNumber(registeredTeam.game_name, games)).padStart(2, '0')}
-              </span>
+            <div style={{ fontSize: '13px', color: '#595959', marginBottom: 16 }}>
+              Present this code at your table volunteer.
             </div>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ display: 'inline-block' }}>
-                <QRCodeCanvas
-                  value={encodeTeamQR({
-                    teamId: registeredTeam.team_id,
-                    teamName: registeredTeam.team_name,
-                    gameName: registeredTeam.game_name,
-                    eids: registeredTeam.eids,
-                  })}
-                  size={240}
-                  includeMargin
-                  level="M"
-                />
-              </div>
-            </div>
-            {registeredTeam.eids?.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: 8 }}>
-                {registeredTeam.eids.map((eid, idx) => (
-                  <span key={idx} style={{
-                    padding: '4px 12px',
-                    border: '1px solid rgba(0,0,0,0.15)',
-                    borderRadius: '16px',
-                    fontSize: '12px',
-                    backgroundColor: 'rgba(255,255,255,0.6)'
-                  }}>
-                    {eid}
-                  </span>
-                ))}
-              </div>
-            )}
+            <QRCodeCanvas
+              value={encodeTeamQR({
+                teamId: registeredTeam.team_id,
+                teamName: registeredTeam.team_name,
+                gameName: registeredTeam.game_name,
+                eids: registeredTeam.eids,
+              })}
+              size={240}
+              includeMargin
+              level="M"
+            />
           </div>
-          <Space style={{ width: '100%', justifyContent: 'center', gap: '12px', marginTop: 24 }}>
-            <Button
-              onClick={() => {
-                setRegisteredTeam(null)
-                setStep('gameSelection')
-                setSelectedGame(null)
-              }}
-              size="large"
-              style={{ minWidth: '110px' }}
-            >
-              Close
-            </Button>
-            <Button
-              type="primary"
-              onClick={handleDownloadQR}
-              loading={downloading}
-              size="large"
-              style={{ minWidth: '110px' }}
-            >
-              Download QR
-            </Button>
-          </Space>
         </div>
+
+        <Button
+          type="primary"
+          onClick={handleDownloadQR}
+          loading={downloading}
+          size="large"
+          block
+          style={{ marginTop: 24 }}
+        >
+          Download QR
+        </Button>
       </Card>
     )
   }
