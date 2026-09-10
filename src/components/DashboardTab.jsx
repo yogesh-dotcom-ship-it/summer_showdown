@@ -106,8 +106,11 @@ export default function DashboardTab() {
           const gameColor = getGameColorByIndex(idx)
 
           return (
-            <Col xs={24} md={12} lg={8} key={game.name}>
-              <Card style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} styles={{ body: { padding: '16px' } }}>
+            <Col xs={24} md={12} lg={8} key={game.name} style={{ display: 'flex' }}>
+              <Card
+                style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', width: '100%', display: 'flex', flexDirection: 'column' }}
+                styles={{ body: { padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' } }}
+              >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
                   <div style={{
                     width: 56,
@@ -150,7 +153,7 @@ export default function DashboardTab() {
                   )}
                 </div>
 
-                <div>
+                <div style={{ flex: 1 }}>
                   <Text style={{ fontSize: '12px', color: '#8c8c8c', display: 'block', marginBottom: '8px' }}>In Queue</Text>
                   {nextTurn.length === 0 ? (
                     <Text type="secondary" style={{ fontSize: '12px' }}>No teams in queue</Text>
