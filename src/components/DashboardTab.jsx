@@ -40,7 +40,7 @@ export default function DashboardTab() {
       supabase.from('ss_games').select('name').order('name', { ascending: true }),
       supabase
         .from('ss_teams')
-        .select('team_id, team_name, game_name, status, completion_time, queued_at'),
+        .select('team_id, team_name, game_name, status, completion_time, queued_at, completed_at'),
     ])
     setGames(gamesData ?? [])
     setTeams(teamsData ?? [])
@@ -100,6 +100,11 @@ export default function DashboardTab() {
             .filter((t) => t.status !== 'completed')
             .sort((a, b) => new Date(a.queued_at) - new Date(b.queued_at))
             .slice(0, 5)
+
+          // Most recently completed team for this game
+          const lastPlayed = gameTeams
+            .filter((t) => t.status === 'completed' && t.completed_at)
+            .sort((a, b) => new Date(b.completed_at) - new Date(a.completed_at))[0]
 
           // The winner is the team with the least completion time
           const podiumTeams = leastTime.slice(0, 1)
@@ -174,6 +179,23 @@ export default function DashboardTab() {
                         </div>
                       ))}
                     </div>
+                  )}
+                </div>
+
+                <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #f0f0f0' }}>
+                  <Text style={{ fontSize: '12px', color: '#8c8c8c', display: 'block', marginBottom: '8px' }}>Last Played</Text>
+                  {lastPlayed ? (
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '13px'
+                    }}>
+                      <span>{lastPlayed.team_name}</span>
+                      <span style={{ color: '#52c41a', fontSize: '12px' }}>Completed</span>
+                    </div>
+                  ) : (
+                    <Text type="secondary" style={{ fontSize: '12px' }}>No teams have played yet</Text>
                   )}
                 </div>
               </Card>
