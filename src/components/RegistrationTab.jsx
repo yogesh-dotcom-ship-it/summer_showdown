@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { Form, Input, Button, Card, Alert, Typography } from 'antd'
 import { QRCodeCanvas } from 'qrcode.react'
-import html2canvas from 'html2canvas'
 import { supabase } from '../lib/supabaseClient'
 import { generateTeamId } from '../utils/teamId'
 import { getGameImage } from '../utils/gameImages'
@@ -147,36 +146,84 @@ export default function RegistrationTab() {
     form.resetFields()
   }
 
-  const handleDownloadQR = async () => {
-    if (!successCardRef.current) return
+  const handleDownloadQR = () => {
+    const qrEl = successCardRef.current?.querySelector('#registration-qr-canvas')
+    if (!qrEl) return
     setDownloading(true)
 
-    // html2canvas doesn't reliably rasterise a <canvas> that's been scaled
-    // down with CSS (width:100%). Snap the QR back to its natural pixel size
-    // for the capture, then restore the responsive style afterwards.
-    const qr = successCardRef.current.querySelector('#registration-qr-canvas')
-    const prev = qr ? { width: qr.style.width, height: qr.style.height, maxWidth: qr.style.maxWidth } : null
-    if (qr) {
-      qr.style.width = `${qr.width}px`
-      qr.style.height = `${qr.height}px`
-      qr.style.maxWidth = 'none'
-    }
-
     try {
-      const canvas = await html2canvas(successCardRef.current, {
-        backgroundColor: null,
-        scale: 2,
-      })
+      // Compose the PNG by hand with the 2D canvas API -- html2canvas is
+      // unreliable at rasterising a <canvas> child, so we draw the QR
+      // bitmap ourselves plus the surrounding text.
+      const gameColor = getGameColor(registeredTeam.game_name, games)
+      const tableNo = String(getTableNumber(registeredTeam.game_name, games)).padStart(2, '0')
+
+      const scale = 2
+      const W = 420
+      const qrSize = 260
+      const pad = 24
+      let y = pad
+
+      const out = document.createElement('canvas')
+      const ctx = out.getContext('2d')
+      const H = 470 + (registeredTeam.eids?.length ? 20 : 0)
+      out.width = W * scale
+      out.height = H * scale
+      ctx.scale(scale, scale)
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'top'
+
+      ctx.fillStyle = gameColor.bgBright
+      ctx.fillRect(0, 0, W, H)
+
+      ctx.fillStyle = '#389e0d'
+      ctx.font = '700 22px system-ui, -apple-system, sans-serif'
+      ctx.fillText('Registration successful', W / 2, y)
+      y += 40
+
+      ctx.fillStyle = '#000'
+      ctx.font = '14px system-ui, -apple-system, sans-serif'
+      ctx.fillText(registeredTeam.game_name, W / 2, y)
+      y += 22
+
+      ctx.font = '700 16px system-ui, -apple-system, sans-serif'
+      ctx.fillText(registeredTeam.team_name, W / 2, y)
+      y += 22
+
+      if (registeredTeam.eids?.length) {
+        ctx.fillStyle = '#595959'
+        ctx.font = '12px system-ui, -apple-system, sans-serif'
+        ctx.fillText(registeredTeam.eids.join(' | '), W / 2, y)
+        y += 20
+      }
+
+      y += 12
+      ctx.fillStyle = 'rgba(0,0,0,0.05)'
+      const boxTop = y
+      const boxH = 60 + qrSize + 40
+      ctx.fillRect(pad, boxTop, W - pad * 2, boxH)
+
+      y += 16
+      ctx.fillStyle = '#000'
+      ctx.font = '700 22px system-ui, -apple-system, sans-serif'
+      ctx.fillText(`Table no : ${tableNo}`, W / 2, y)
+      y += 30
+
+      ctx.fillStyle = '#595959'
+      ctx.font = '13px system-ui, -apple-system, sans-serif'
+      ctx.fillText('Present this code at your table volunteer.', W / 2, y)
+      y += 24
+
+      const qrX = (W - qrSize) / 2
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(qrX - 8, y - 8, qrSize + 16, qrSize + 16)
+      ctx.drawImage(qrEl, qrX, y, qrSize, qrSize)
+
       const link = document.createElement('a')
-      link.href = canvas.toDataURL('image/png')
+      link.href = out.toDataURL('image/png')
       link.download = `${registeredTeam.team_name}_registration.png`
       link.click()
     } finally {
-      if (qr && prev) {
-        qr.style.width = prev.width
-        qr.style.height = prev.height
-        qr.style.maxWidth = prev.maxWidth
-      }
       setDownloading(false)
     }
   }
