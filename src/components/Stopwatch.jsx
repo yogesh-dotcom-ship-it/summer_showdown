@@ -14,7 +14,7 @@ function formatElapsed(ms) {
 // Elapsed time is tracked as accumulated ms + a running start timestamp, so
 // pausing/resuming never loses time and the value submitted is genuinely
 // "total time elapsed while running" -- not wall-clock start-to-finish.
-export default function Stopwatch({ onSubmit, submitting, disabled }) {
+export default function Stopwatch({ onSubmit, onStart, submitting, disabled }) {
   const [running, setRunning] = useState(false)
   const [accumulatedMs, setAccumulatedMs] = useState(0)
   const [displayMs, setDisplayMs] = useState(0)
@@ -36,6 +36,8 @@ export default function Stopwatch({ onSubmit, submitting, disabled }) {
   }, [running, accumulatedMs])
 
   function handleStart() {
+    // Fire onStart only on the first Start of this run, not on Resume.
+    if (!hasRun) onStart?.()
     runStartRef.current = Date.now()
     setRunning(true)
     setHasRun(true)

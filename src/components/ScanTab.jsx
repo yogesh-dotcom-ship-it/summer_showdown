@@ -123,6 +123,19 @@ export default function ScanTab() {
     }
   }
 
+  async function handleStartTimer() {
+    if (!team || team.status === 'completed') return
+    // Flip the team to "Playing" on the dashboard the moment the volunteer
+    // starts the stopwatch.
+    const { data } = await supabase
+      .from('ss_teams')
+      .update({ status: 'in_progress', started_at: new Date().toISOString() })
+      .eq('team_id', team.team_id)
+      .select()
+      .single()
+    if (data) setTeam((prev) => ({ ...prev, ...data, team_name: prev.team_name, game_name: prev.game_name }))
+  }
+
   async function handleSubmitTime(elapsedTime) {
     if (!team) return
     setSubmitting(true)
@@ -281,7 +294,7 @@ export default function ScanTab() {
                 </Space>
               </>
             ) : (
-              <Stopwatch onSubmit={handleSubmitTime} submitting={submitting} />
+              <Stopwatch onStart={handleStartTimer} onSubmit={handleSubmitTime} submitting={submitting} />
             )}
 
             {team.status !== 'completed' && (
