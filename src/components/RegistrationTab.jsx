@@ -21,6 +21,31 @@ function getTableNumber(gameName, games) {
 
 const MAX_TEAM_ID_ATTEMPTS = 5
 
+// Resolve once the canvas has a painted (non-transparent) bitmap, or after
+// `timeoutMs`. Guards against exporting a blank QR before qrcode.react's
+// paint effect has run on a slow device.
+function waitForCanvasPainted(ref, timeoutMs) {
+  return new Promise((resolve) => {
+    const start = performance.now()
+    const check = () => {
+      const c = ref.current
+      if (c && c.width && c.height) {
+        try {
+          const ctx = c.getContext('2d')
+          const { data } = ctx.getImageData(Math.floor(c.width / 2), Math.floor(c.height / 2), 1, 1)
+          // any non-zero alpha means something has been drawn
+          if (data[3] !== 0) return resolve()
+        } catch {
+          // tainted / not ready -- fall through to retry
+        }
+      }
+      if (performance.now() - start > timeoutMs) return resolve()
+      requestAnimationFrame(check)
+    }
+    requestAnimationFrame(check)
+  })
+}
+
 export default function RegistrationTab() {
   const [form] = Form.useForm()
   const [games, setGames] = useState([])
@@ -33,6 +58,7 @@ export default function RegistrationTab() {
   const [nameError, setNameError] = useState(null)
   const [nameSuggestions, setNameSuggestions] = useState([])
   const successCardRef = useRef(null)
+  const exportQrRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -146,19 +172,21 @@ export default function RegistrationTab() {
     form.resetFields()
   }
 
-  const handleDownloadQR = () => {
-    const qrEl = successCardRef.current?.querySelector('#registration-qr-canvas')
-    if (!qrEl) return
-    setDownloading(true)
+  // Build the shareable PNG (background + text + QR) on a canvas we control.
+  // Drawing the QR ourselves via ctx.drawImage avoids html2canvas, which
+  // can't reliably rasterise a <canvas> child.
+  const buildRegistrationPng = () =>
+    new Promise((resolve, reject) => {
+      const qrEl = exportQrRef.current
+      if (!qrEl || !qrEl.width) {
+        reject(new Error('QR not ready'))
+        return
+      }
 
-    try {
-      // Compose the PNG by hand with the 2D canvas API -- html2canvas is
-      // unreliable at rasterising a <canvas> child, so we draw the QR
-      // bitmap ourselves plus the surrounding text.
       const gameColor = getGameColor(registeredTeam.game_name, games)
       const tableNo = String(getTableNumber(registeredTeam.game_name, games)).padStart(2, '0')
 
-      const scale = 2
+      const dpr = 2
       const W = 420
       const qrSize = 260
       const pad = 24
@@ -167,9 +195,9 @@ export default function RegistrationTab() {
       const out = document.createElement('canvas')
       const ctx = out.getContext('2d')
       const H = 470 + (registeredTeam.eids?.length ? 20 : 0)
-      out.width = W * scale
-      out.height = H * scale
-      ctx.scale(scale, scale)
+      out.width = W * dpr
+      out.height = H * dpr
+      ctx.scale(dpr, dpr)
       ctx.textAlign = 'center'
       ctx.textBaseline = 'top'
 
@@ -199,9 +227,7 @@ export default function RegistrationTab() {
 
       y += 12
       ctx.fillStyle = 'rgba(0,0,0,0.05)'
-      const boxTop = y
-      const boxH = 60 + qrSize + 40
-      ctx.fillRect(pad, boxTop, W - pad * 2, boxH)
+      ctx.fillRect(pad, y, W - pad * 2, 60 + qrSize + 40)
 
       y += 16
       ctx.fillStyle = '#000'
@@ -219,10 +245,52 @@ export default function RegistrationTab() {
       ctx.fillRect(qrX - 8, y - 8, qrSize + 16, qrSize + 16)
       ctx.drawImage(qrEl, qrX, y, qrSize, qrSize)
 
+      out.toBlob((blob) => {
+        if (blob) resolve(blob)
+        else reject(new Error('Could not encode image'))
+      }, 'image/png')
+    })
+
+  const handleDownloadQR = async () => {
+    setDownloading(true)
+    try {
+      // QRCodeCanvas paints its bitmap on mount / after an effect. Poll
+      // until the off-screen export canvas has actually rendered (non-blank)
+      // rather than assuming a fixed number of frames is enough.
+      await waitForCanvasPainted(exportQrRef, 2000)
+      const blob = await buildRegistrationPng()
+      const fileName = `${registeredTeam.team_name}_registration.png`
+      const file = new File([blob], fileName, { type: 'image/png' })
+
+      // iOS Safari ignores <a download>; the Web Share API is the reliable
+      // path there ("Save Image" in the share sheet). Use it when available
+      // and the file is shareable; fall back to a blob-URL download link
+      // (Android, desktop), then to opening the image in a new tab.
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: fileName })
+          return
+        } catch (err) {
+          if (err?.name === 'AbortError') return // user dismissed the sheet
+        }
+      }
+
+      const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = out.toDataURL('image/png')
-      link.download = `${registeredTeam.team_name}_registration.png`
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
       link.click()
+      link.remove()
+
+      // Some in-app / iOS browsers silently ignore the download attribute;
+      // open the image so the user can long-press to save.
+      const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)
+      if (isIOS) window.open(url, '_blank')
+
+      setTimeout(() => URL.revokeObjectURL(url), 10000)
+    } catch (err) {
+      setError(`Could not generate the image: ${err.message}`)
     } finally {
       setDownloading(false)
     }
@@ -231,6 +299,12 @@ export default function RegistrationTab() {
   if (registeredTeam) {
     const gameColor = getGameColor(registeredTeam.game_name, games)
     const tableNo = String(getTableNumber(registeredTeam.game_name, games)).padStart(2, '0')
+    const qrPayloadValue = encodeTeamQR({
+      teamId: registeredTeam.team_id,
+      teamName: registeredTeam.team_name,
+      gameName: registeredTeam.game_name,
+      eids: registeredTeam.eids,
+    })
     return (
       <Card style={{
         maxWidth: 600,
@@ -272,13 +346,7 @@ export default function RegistrationTab() {
               borderRadius: 4,
             }}>
               <QRCodeCanvas
-                id="registration-qr-canvas"
-                value={encodeTeamQR({
-                  teamId: registeredTeam.team_id,
-                  teamName: registeredTeam.team_name,
-                  gameName: registeredTeam.game_name,
-                  eids: registeredTeam.eids,
-                })}
+                value={qrPayloadValue}
                 size={240}
                 level="M"
                 style={{ display: 'block', width: '100%', height: 'auto', maxWidth: 240 }}
@@ -286,6 +354,17 @@ export default function RegistrationTab() {
             </div>
           </div>
         </div>
+
+        {/* Unscaled, off-screen copy at native pixel size -- this is the one
+            read by drawImage for the download, so a CSS-scaled canvas can
+            never come out blank. */}
+        <QRCodeCanvas
+          ref={exportQrRef}
+          value={qrPayloadValue}
+          size={260}
+          level="M"
+          style={{ position: 'absolute', left: '-9999px', top: 0, width: 260, height: 260 }}
+        />
 
         <Button
           type="primary"
