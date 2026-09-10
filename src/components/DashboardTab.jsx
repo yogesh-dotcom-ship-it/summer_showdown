@@ -100,10 +100,16 @@ export default function DashboardTab() {
               return timeA - timeB
             })
 
-          // Get waiting/in-progress teams
+          // Queue: the team currently Playing (in_progress) first, then the
+          // rest by queue order.
           const nextTurn = gameTeams
             .filter((t) => t.status !== 'completed')
-            .sort((a, b) => new Date(a.queued_at) - new Date(b.queued_at))
+            .sort((a, b) => {
+              const aPlaying = a.status === 'in_progress' ? 0 : 1
+              const bPlaying = b.status === 'in_progress' ? 0 : 1
+              if (aPlaying !== bPlaying) return aPlaying - bPlaying
+              return new Date(a.queued_at) - new Date(b.queued_at)
+            })
             .slice(0, 5)
 
           // Most recently completed team for this game
@@ -169,7 +175,12 @@ export default function DashboardTab() {
                     <Text type="secondary" style={{ fontSize: '12px' }}>No teams in queue</Text>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      {nextTurn.map((t, i) => (
+                      {(() => {
+                        const nextId = nextTurn.find((t) => t.status !== 'in_progress')?.team_id
+                        return nextTurn.map((t) => {
+                          const isPlaying = t.status === 'in_progress'
+                          const isNext = t.team_id === nextId
+                          return (
                         <div key={t.team_id} style={{
                           display: 'flex',
                           justifyContent: 'space-between',
@@ -178,11 +189,13 @@ export default function DashboardTab() {
                           fontSize: '13px'
                         }}>
                           <span>{t.team_name}</span>
-                          <span style={{ color: t.status === 'in_progress' ? '#1677ff' : (i === 0 ? '#fa8c16' : '#8c8c8c'), fontSize: '12px' }}>
-                            {t.status === 'in_progress' ? 'Playing' : (i === 0 ? 'Next' : 'In queue')}
+                          <span style={{ color: isPlaying ? '#1677ff' : (isNext ? '#fa8c16' : '#8c8c8c'), fontSize: '12px' }}>
+                            {isPlaying ? 'Playing' : (isNext ? 'Next' : 'In queue')}
                           </span>
                         </div>
-                      ))}
+                          )
+                        })
+                      })()}
                     </div>
                   )}
                 </div>
