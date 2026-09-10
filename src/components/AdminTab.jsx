@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { Table, Button, Card, Spin, Empty, Space, Popconfirm, message, Form, Input, Modal } from 'antd'
-import { DeleteOutlined, EditOutlined, DownloadOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, DownloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { supabase } from '../lib/supabaseClient'
 import PasswordModal from './PasswordModal'
 import { generateTeamCSV, downloadCSV } from '../utils/csvExport'
@@ -12,6 +12,7 @@ export default function AdminTab() {
   const [editingTeam, setEditingTeam] = useState(null)
   const [editForm] = Form.useForm()
   const [editModalOpen, setEditModalOpen] = useState(false)
+  const [search, setSearch] = useState('')
 
   const loadData = useCallback(async () => {
     const { data: teamsData } = await supabase
@@ -61,6 +62,12 @@ export default function AdminTab() {
       message.error('Failed to update team name')
     }
   }
+
+  const filteredTeams = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return teams
+    return teams.filter((t) => (t.team_name || '').toLowerCase().includes(q))
+  }, [teams, search])
 
   const handleExportCSV = () => {
     const csv = generateTeamCSV(teams)
@@ -144,8 +151,8 @@ export default function AdminTab() {
 
   return (
     <Card style={{ borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h2>Admin Dashboard - Team Management</h2>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
+        <h2 style={{ margin: 0 }}>Admin Dashboard - Team Management</h2>
         <Button
           type="primary"
           icon={<DownloadOutlined />}
@@ -156,14 +163,24 @@ export default function AdminTab() {
         </Button>
       </div>
 
+      <Input
+        allowClear
+        prefix={<SearchOutlined />}
+        placeholder="Search by team name"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ maxWidth: 320, marginBottom: 16 }}
+      />
+
       {teams.length === 0 ? (
         <Empty description="No teams registered yet" />
       ) : (
         <Table
           columns={columns}
-          dataSource={teams.map(t => ({ ...t, key: t.team_id }))}
+          dataSource={filteredTeams.map(t => ({ ...t, key: t.team_id }))}
           scroll={{ x: 730 }}
           pagination={{ pageSize: 10 }}
+          locale={{ emptyText: search ? `No teams match "${search}"` : 'No teams' }}
         />
       )}
 
