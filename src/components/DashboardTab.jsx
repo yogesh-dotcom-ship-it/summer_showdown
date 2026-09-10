@@ -2,21 +2,9 @@ import { useEffect, useState, useCallback } from 'react'
 import { Row, Col, Card, Typography, Empty, Spin } from 'antd'
 import { supabase } from '../lib/supabaseClient'
 import { getGameImage } from '../utils/gameImages'
+import { getGameColorByIndex } from '../utils/gameColors'
 
 const { Title, Text } = Typography
-
-const GAME_COLORS = [
-  { bg: '#fffbe6', border: '#faad14' }, // Yellow
-  { bg: '#fff7e6', border: '#ff7a45' }, // Orange
-  { bg: '#f6ffed', border: '#52c41a' }, // Green
-  { bg: '#e6f7ff', border: '#1890ff' }, // Blue
-  { bg: '#f9f0ff', border: '#722ed1' }, // Purple
-  { bg: '#fff1f0', border: '#ff4d4f' }, // Red
-]
-
-function getGameColor(index) {
-  return GAME_COLORS[index % GAME_COLORS.length]
-}
 
 function parseTimeString(timeStr) {
   if (typeof timeStr !== 'string') return timeStr
@@ -115,7 +103,7 @@ export default function DashboardTab() {
 
           // The winner is the team with the least completion time
           const podiumTeams = leastTime.slice(0, 1)
-          const gameColor = getGameColor(idx)
+          const gameColor = getGameColorByIndex(idx)
 
           return (
             <Col xs={24} md={12} lg={8} key={game.name}>

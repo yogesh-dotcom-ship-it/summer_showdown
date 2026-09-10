@@ -5,20 +5,7 @@ import { supabase } from '../lib/supabaseClient'
 import Stopwatch from './Stopwatch'
 import PasswordModal from './PasswordModal'
 import { decodeTeamQR } from '../utils/qrPayload'
-
-const GAME_COLORS = [
-  { bg: '#fffbe6', border: '#faad14' }, // Yellow
-  { bg: '#fff7e6', border: '#ff7a45' }, // Orange
-  { bg: '#f6ffed', border: '#52c41a' }, // Green
-  { bg: '#e6f7ff', border: '#1890ff' }, // Blue
-  { bg: '#f9f0ff', border: '#722ed1' }, // Purple
-  { bg: '#fff1f0', border: '#ff4d4f' }, // Red
-]
-
-function getGameColor(gameName, games) {
-  const gameIndex = games.findIndex(g => g.name === gameName)
-  return GAME_COLORS[gameIndex >= 0 ? gameIndex : 0]
-}
+import { getGameColor } from '../utils/gameColors'
 
 const { Title, Text } = Typography
 const SCANNER_ELEMENT_ID = 'qr-scanner-region'

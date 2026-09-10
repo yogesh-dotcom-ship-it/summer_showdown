@@ -8,22 +8,9 @@ import { getGameImage } from '../utils/gameImages'
 import { getGameDescription } from '../utils/gameDescriptions'
 import { suggestTeamNames } from '../utils/teamNameSuggestions'
 import { encodeTeamQR } from '../utils/qrPayload'
+import { getGameColor } from '../utils/gameColors'
 
 const { Title, Text } = Typography
-
-const GAME_COLORS = [
-  { bg: '#fffbe6', border: '#faad14' }, // Yellow
-  { bg: '#fff7e6', border: '#ff7a45' }, // Orange
-  { bg: '#f6ffed', border: '#52c41a' }, // Green
-  { bg: '#e6f7ff', border: '#1890ff' }, // Blue
-  { bg: '#f9f0ff', border: '#722ed1' }, // Purple
-  { bg: '#fff1f0', border: '#ff4d4f' }, // Red
-]
-
-function getGameColor(gameName, games) {
-  const gameIndex = games.findIndex(g => g.name === gameName)
-  return GAME_COLORS[gameIndex >= 0 ? gameIndex : 0]
-}
 
 // Table numbers follow the same fixed game order as colors -- game 1 is
 // table 1, game 2 is table 2, etc. -- so the assignment stays consistent
@@ -186,9 +173,9 @@ export default function RegistrationTab() {
         margin: '0 auto',
         borderRadius: '12px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        backgroundColor: gameColor.bg
+        backgroundColor: gameColor.bgBright
       }}>
-        <div ref={successCardRef} style={{ textAlign: 'center', backgroundColor: gameColor.bg, padding: '8px' }}>
+        <div ref={successCardRef} style={{ textAlign: 'center', backgroundColor: gameColor.bgBright, padding: '8px' }}>
           <Title level={3} style={{ marginTop: 0, marginBottom: 20, color: '#389e0d' }}>
             Registration successful
           </Title>
