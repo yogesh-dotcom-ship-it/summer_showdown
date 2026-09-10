@@ -146,7 +146,7 @@ export default function DashboardTab() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '18px' }}>🥇</span>
                       <span style={{ fontSize: '14px', fontWeight: 600, flex: 1 }}>{podiumTeams[0].team_name}</span>
-                      <span style={{ fontSize: '14px', fontWeight: 600 }}>{formatTime(podiumTeams[0].completion_time)}</span>
+                      <span style={{ fontSize: '24px', fontWeight: 700 }}>{formatTime(podiumTeams[0].completion_time)}</span>
                     </div>
                   ) : (
                     <Text style={{ fontSize: '13px', color: '#8c8c8c' }}>No winner yet</Text>
