@@ -59,8 +59,13 @@ export default function DashboardTab() {
       })
       .subscribe()
 
+    // Fallback poll -- covers the case where realtime isn't enabled for the
+    // ss_teams table in the Supabase project, so the board still updates.
+    const poll = setInterval(loadAll, 10000)
+
     return () => {
       supabase.removeChannel(channel)
+      clearInterval(poll)
     }
   }, [loadAll])
 

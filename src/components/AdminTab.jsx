@@ -26,6 +26,23 @@ export default function AdminTab() {
   useEffect(() => {
     if (!passwordVerified) return
     loadData()
+
+    // Keep the table current as registrations come in and statuses change,
+    // without a manual refresh. Realtime + a polling fallback for projects
+    // where realtime isn't enabled for ss_teams.
+    const channel = supabase
+      .channel('ss_teams_admin')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ss_teams' }, () => {
+        loadData()
+      })
+      .subscribe()
+
+    const poll = setInterval(loadData, 10000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(poll)
+    }
   }, [passwordVerified, loadData])
 
   const handleDelete = async (teamId) => {
