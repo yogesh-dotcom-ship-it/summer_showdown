@@ -213,17 +213,25 @@ export default function RegistrationTab() {
             <div style={{ fontSize: '13px', color: '#595959', marginBottom: 16 }}>
               Present this code at your table volunteer.
             </div>
-            <QRCodeCanvas
-              value={encodeTeamQR({
-                teamId: registeredTeam.team_id,
-                teamName: registeredTeam.team_name,
-                gameName: registeredTeam.game_name,
-                eids: registeredTeam.eids,
-              })}
-              size={240}
-              includeMargin
-              level="M"
-            />
+            <div style={{
+              display: 'inline-block',
+              maxWidth: '100%',
+              backgroundColor: '#fff',
+              padding: 8,
+              borderRadius: 4,
+            }}>
+              <QRCodeCanvas
+                value={encodeTeamQR({
+                  teamId: registeredTeam.team_id,
+                  teamName: registeredTeam.team_name,
+                  gameName: registeredTeam.game_name,
+                  eids: registeredTeam.eids,
+                })}
+                size={240}
+                level="M"
+                style={{ display: 'block', width: '100%', height: 'auto', maxWidth: 240 }}
+              />
+            </div>
           </div>
         </div>
 
