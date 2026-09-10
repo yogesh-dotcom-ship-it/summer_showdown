@@ -71,6 +71,7 @@ create policy "public read games" on ss_games for select using (true);
 create policy "public read teams" on ss_teams for select using (true);
 create policy "public insert teams" on ss_teams for insert with check (true);
 create policy "public update teams" on ss_teams for update using (true);
+create policy "public delete teams" on ss_teams for delete using (true);
 
 -- ---------------------------------------------------------------------------
 -- 5. Realtime

@@ -29,17 +29,23 @@ export default function AdminTab() {
   }, [passwordVerified, loadData])
 
   const handleDelete = async (teamId) => {
-    const { error: teamError } = await supabase
+    const { data, error: teamError } = await supabase
       .from('ss_teams')
       .delete()
       .eq('team_id', teamId)
+      .select()
 
-    if (!teamError) {
-      message.success('Team deleted successfully')
-      loadData()
-    } else {
-      message.error('Failed to delete team')
+    if (teamError) {
+      message.error(`Failed to delete team: ${teamError.message}`)
+      return
     }
+    if (!data || data.length === 0) {
+      // RLS silently blocks the delete (0 rows) when no delete policy exists.
+      message.error('Delete was blocked. Check the ss_teams delete RLS policy in Supabase.')
+      return
+    }
+    message.success('Team deleted successfully')
+    loadData()
   }
 
   const handleEdit = (team) => {
