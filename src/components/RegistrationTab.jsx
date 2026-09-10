@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabaseClient'
 import { generateTeamId } from '../utils/teamId'
 import { getGameImage } from '../utils/gameImages'
 import { getGameDescription } from '../utils/gameDescriptions'
+import { suggestTeamNames } from '../utils/teamNameSuggestions'
 
 const { Title, Text } = Typography
 
@@ -42,6 +43,7 @@ export default function RegistrationTab() {
   const [selectedGame, setSelectedGame] = useState(null)
   const [step, setStep] = useState('gameSelection') // 'gameSelection' or 'teamRegistration'
   const [downloading, setDownloading] = useState(false)
+  const [nameSuggestions, setNameSuggestions] = useState([])
   const successCardRef = useRef(null)
 
   useEffect(() => {
@@ -66,6 +68,34 @@ export default function RegistrationTab() {
   async function handleRegistrationSubmit(values) {
     setSubmitting(true)
     setError(null)
+    setNameSuggestions([])
+
+    const teamName = values.team_name.trim()
+
+    // Team names must be unique across every team, regardless of game.
+    // Checked case-insensitively; the real guard is the unique index on
+    // lower(team_name) in the database, this just gives a friendlier error
+    // and offers alternative names.
+    const { data: nameClash, error: nameLookupError } = await supabase
+      .from('ss_teams')
+      .select('team_name')
+      .ilike('team_name', teamName)
+      .maybeSingle()
+
+    if (nameLookupError) {
+      setError('Could not validate the team name. Please try again.')
+      setSubmitting(false)
+      return
+    }
+
+    if (nameClash) {
+      const { data: allTeams } = await supabase.from('ss_teams').select('team_name')
+      const takenLower = new Set((allTeams ?? []).map((t) => t.team_name.toLowerCase()))
+      setNameSuggestions(suggestTeamNames(teamName, takenLower))
+      setError(`Team name "${teamName}" is already taken. Please choose a different name.`)
+      setSubmitting(false)
+      return
+    }
 
     const eids = [values.eid_1, values.eid_2, values.eid_3, values.eid_4]
       .filter((e) => e)
@@ -106,13 +136,24 @@ export default function RegistrationTab() {
       const team_id = generateTeamId()
       const { data, error: insertError } = await supabase
         .from('ss_teams')
-        .insert({ team_id, team_name: values.team_name.trim(), game_name: selectedGame })
+        .insert({ team_id, team_name: teamName, game_name: selectedGame })
         .select()
         .single()
 
       if (!insertError) {
         team = data
         break
+      }
+      // 23505 = unique_violation. Could be team_id (retry with a new code)
+      // or team_name (someone just took it -- retrying the same name won't
+      // help).
+      if (insertError.code === '23505' && insertError.message?.includes('team_name')) {
+        const { data: allTeams } = await supabase.from('ss_teams').select('team_name')
+        const takenLower = new Set((allTeams ?? []).map((t) => t.team_name.toLowerCase()))
+        setNameSuggestions(suggestTeamNames(teamName, takenLower))
+        setError(`Team name "${teamName}" was just taken by someone else. Please choose a different name.`)
+        setSubmitting(false)
+        return
       }
       if (insertError.code !== '23505') {
         setError(`Registration failed: ${insertError.message}`)
@@ -297,7 +338,39 @@ export default function RegistrationTab() {
       <Title level={4} style={{ marginBottom: 20 }}>Register team</Title>
 
       {error && (
-        <Alert type="error" showIcon message={error} style={{ marginBottom: 16 }} closable onClose={() => setError(null)} />
+        <Alert
+          type="error"
+          showIcon
+          message={error}
+          description={
+            nameSuggestions.length > 0 ? (
+              <div style={{ marginTop: 8 }}>
+                <Text style={{ fontSize: '13px' }}>Try one of these:</Text>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: 6 }}>
+                  {nameSuggestions.map((s) => (
+                    <Button
+                      key={s}
+                      size="small"
+                      onClick={() => {
+                        form.setFieldValue('team_name', s)
+                        setError(null)
+                        setNameSuggestions([])
+                      }}
+                    >
+                      {s}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            ) : null
+          }
+          style={{ marginBottom: 16 }}
+          closable
+          onClose={() => {
+            setError(null)
+            setNameSuggestions([])
+          }}
+        />
       )}
 
       <div style={{
@@ -353,7 +426,15 @@ export default function RegistrationTab() {
           required
           rules={[{ required: true, message: 'Team name is required' }]}
         >
-          <Input placeholder="e.g. The Sprinters" />
+          <Input
+            placeholder="e.g. The Sprinters"
+            onChange={() => {
+              if (nameSuggestions.length > 0) {
+                setNameSuggestions([])
+                setError(null)
+              }
+            }}
+          />
         </Form.Item>
 
         {[1, 2, 3, 4].map((n) => {
