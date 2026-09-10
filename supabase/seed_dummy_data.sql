@@ -6,8 +6,8 @@
 -- whose team_id starts with "SS-DEMO" first, so re-running just refreshes
 -- the same demo rows instead of duplicating them.
 --
--- NOTE: SIDs (eid) only need to be unique per game (unique(eid, game_name)),
--- so the same demo SID block is reused across all three games below.
+-- Employee IDs are not stored (company legal policy), so this seed only
+-- populates ss_teams.
 
 -- Make sure the three games this demo data references actually exist --
 -- harmless no-op if they're already there.
@@ -32,15 +32,6 @@ insert into ss_teams (team_id, team_name, game_name, status, completion_time, qu
   ('SS-DEMO06', 'Rack Raiders',       'Ball-Top Blitz', 'registered', null, now() - interval '16 minutes', null, null),
   ('SS-DEMO07', 'Ball Busters',       'Ball-Top Blitz', 'registered', null, now() - interval '15 minutes', null, null);
 
-insert into ss_team_members (team_id, eid) values
-  ('SS-DEMO01', 'I700101'), ('SS-DEMO01', 'I700102'), ('SS-DEMO01', 'I700103'),
-  ('SS-DEMO02', 'I700201'), ('SS-DEMO02', 'I700202'), ('SS-DEMO02', 'I700203'),
-  ('SS-DEMO03', 'I700301'), ('SS-DEMO03', 'I700302'), ('SS-DEMO03', 'I700303'),
-  ('SS-DEMO04', 'I700401'), ('SS-DEMO04', 'I700402'), ('SS-DEMO04', 'I700403'),
-  ('SS-DEMO05', 'I700501'), ('SS-DEMO05', 'I700502'), ('SS-DEMO05', 'I700503'),
-  ('SS-DEMO06', 'I700601'), ('SS-DEMO06', 'I700602'), ('SS-DEMO06', 'I700603'),
-  ('SS-DEMO07', 'I700701'), ('SS-DEMO07', 'I700702'), ('SS-DEMO07', 'I700703');
-
 -- ---------------------------------------------------------------------------
 -- Rapid-Roll Rumble
 -- ---------------------------------------------------------------------------
@@ -53,15 +44,6 @@ insert into ss_teams (team_id, team_name, game_name, status, completion_time, qu
   ('SS-DEMO16', 'The Rollercoasters', 'Rapid-Roll Rumble', 'registered', null, now() - interval '16 minutes', null, null),
   ('SS-DEMO17', 'Quick Rollers',      'Rapid-Roll Rumble', 'registered', null, now() - interval '15 minutes', null, null);
 
-insert into ss_team_members (team_id, eid) values
-  ('SS-DEMO11', 'I700101'), ('SS-DEMO11', 'I700102'), ('SS-DEMO11', 'I700103'),
-  ('SS-DEMO12', 'I700201'), ('SS-DEMO12', 'I700202'), ('SS-DEMO12', 'I700203'),
-  ('SS-DEMO13', 'I700301'), ('SS-DEMO13', 'I700302'), ('SS-DEMO13', 'I700303'),
-  ('SS-DEMO14', 'I700401'), ('SS-DEMO14', 'I700402'), ('SS-DEMO14', 'I700403'),
-  ('SS-DEMO15', 'I700501'), ('SS-DEMO15', 'I700502'), ('SS-DEMO15', 'I700503'),
-  ('SS-DEMO16', 'I700601'), ('SS-DEMO16', 'I700602'), ('SS-DEMO16', 'I700603'),
-  ('SS-DEMO17', 'I700701'), ('SS-DEMO17', 'I700702'), ('SS-DEMO17', 'I700703');
-
 -- ---------------------------------------------------------------------------
 -- Nine-cup knockout
 -- ---------------------------------------------------------------------------
@@ -73,12 +55,3 @@ insert into ss_teams (team_id, team_name, game_name, status, completion_time, qu
   ('SS-DEMO25', 'Cup Conquerors',     'Nine-cup knockout', 'registered', null, now() - interval '17 minutes', null, null),
   ('SS-DEMO26', 'The Sharpshooters',  'Nine-cup knockout', 'registered', null, now() - interval '16 minutes', null, null),
   ('SS-DEMO27', 'Bounce Bandits',     'Nine-cup knockout', 'registered', null, now() - interval '15 minutes', null, null);
-
-insert into ss_team_members (team_id, eid) values
-  ('SS-DEMO21', 'I700101'), ('SS-DEMO21', 'I700102'), ('SS-DEMO21', 'I700103'),
-  ('SS-DEMO22', 'I700201'), ('SS-DEMO22', 'I700202'), ('SS-DEMO22', 'I700203'),
-  ('SS-DEMO23', 'I700301'), ('SS-DEMO23', 'I700302'), ('SS-DEMO23', 'I700303'),
-  ('SS-DEMO24', 'I700401'), ('SS-DEMO24', 'I700402'), ('SS-DEMO24', 'I700403'),
-  ('SS-DEMO25', 'I700501'), ('SS-DEMO25', 'I700502'), ('SS-DEMO25', 'I700503'),
-  ('SS-DEMO26', 'I700601'), ('SS-DEMO26', 'I700602'), ('SS-DEMO26', 'I700603'),
-  ('SS-DEMO27', 'I700701'), ('SS-DEMO27', 'I700702'), ('SS-DEMO27', 'I700703');

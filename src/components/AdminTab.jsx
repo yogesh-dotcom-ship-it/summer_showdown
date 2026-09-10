@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Table, Button, Card, Spin, Empty, Space, Popconfirm, Alert, message, Form, Input, Modal } from 'antd'
+import { Table, Button, Card, Spin, Empty, Space, Popconfirm, message, Form, Input, Modal } from 'antd'
 import { DeleteOutlined, EditOutlined, DownloadOutlined } from '@ant-design/icons'
 import { supabase } from '../lib/supabaseClient'
 import PasswordModal from './PasswordModal'
@@ -8,24 +8,17 @@ import { generateTeamCSV, downloadCSV } from '../utils/csvExport'
 export default function AdminTab() {
   const [passwordVerified, setPasswordVerified] = useState(false)
   const [teams, setTeams] = useState([])
-  const [members, setMembers] = useState([])
   const [loading, setLoading] = useState(true)
   const [editingTeam, setEditingTeam] = useState(null)
   const [editForm] = Form.useForm()
   const [editModalOpen, setEditModalOpen] = useState(false)
 
   const loadData = useCallback(async () => {
-    const [{ data: teamsData }, { data: membersData }] = await Promise.all([
-      supabase
-        .from('ss_teams')
-        .select('team_id, team_name, game_name, status, completion_time, created_at')
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('ss_team_members')
-        .select('team_id, eid')
-    ])
+    const { data: teamsData } = await supabase
+      .from('ss_teams')
+      .select('team_id, team_name, game_name, status, completion_time, created_at')
+      .order('created_at', { ascending: false })
     setTeams(teamsData ?? [])
-    setMembers(membersData ?? [])
     setLoading(false)
   }, [])
 
@@ -35,37 +28,21 @@ export default function AdminTab() {
   }, [passwordVerified, loadData])
 
   const handleDelete = async (teamId) => {
-    const { error: membersError } = await supabase
-      .from('ss_team_members')
+    const { error: teamError } = await supabase
+      .from('ss_teams')
       .delete()
       .eq('team_id', teamId)
 
-    if (!membersError) {
-      const { error: teamError } = await supabase
-        .from('ss_teams')
-        .delete()
-        .eq('team_id', teamId)
-
-      if (!teamError) {
-        message.success('Team deleted successfully')
-        loadData()
-      } else {
-        message.error('Failed to delete team')
-      }
+    if (!teamError) {
+      message.success('Team deleted successfully')
+      loadData()
     } else {
-      message.error('Failed to delete team members')
+      message.error('Failed to delete team')
     }
   }
 
   const handleEdit = (team) => {
-    const teamMembers = members.filter(m => m.team_id === team.team_id)
-    editForm.setFieldsValue({
-      team_name: team.team_name,
-      eid_1: teamMembers[0]?.eid || '',
-      eid_2: teamMembers[1]?.eid || '',
-      eid_3: teamMembers[2]?.eid || '',
-      eid_4: teamMembers[3]?.eid || ''
-    })
+    editForm.setFieldsValue({ team_name: team.team_name })
     setEditingTeam(team)
     setEditModalOpen(true)
   }
@@ -76,32 +53,17 @@ export default function AdminTab() {
       .update({ team_name: values.team_name })
       .eq('team_id', editingTeam.team_id)
 
-    if (teamError) {
-      message.error('Failed to update team name')
-      return
-    }
-
-    const newEids = [values.eid_1, values.eid_2, values.eid_3, values.eid_4]
-      .filter(e => e)
-      .map(e => e.trim())
-
-    await supabase.from('ss_team_members').delete().eq('team_id', editingTeam.team_id)
-
-    const { error: membersError } = await supabase
-      .from('ss_team_members')
-      .insert(newEids.map(eid => ({ team_id: editingTeam.team_id, eid })))
-
-    if (!membersError) {
+    if (!teamError) {
       message.success('Team updated successfully')
       setEditModalOpen(false)
       loadData()
     } else {
-      message.error('Failed to update team members')
+      message.error('Failed to update team name')
     }
   }
 
   const handleExportCSV = () => {
-    const csv = generateTeamCSV(teams, members)
+    const csv = generateTeamCSV(teams)
     downloadCSV(csv, `teams_export_${new Date().toISOString().split('T')[0]}.csv`)
     message.success('CSV exported successfully')
   }
@@ -111,62 +73,26 @@ export default function AdminTab() {
       title: 'Team Name',
       dataIndex: 'team_name',
       key: 'team_name',
-      width: 150
-    },
-    {
-      title: 'Player-01',
-      key: 'eid_1',
-      render: (_, record) => {
-        const member = members.find(m => m.team_id === record.team_id && members.filter(x => x.team_id === record.team_id).indexOf(m) === 0)
-        return member?.eid || '--'
-      },
-      width: 120
-    },
-    {
-      title: 'Player-02',
-      key: 'eid_2',
-      render: (_, record) => {
-        const teamMembers = members.filter(m => m.team_id === record.team_id)
-        return teamMembers[1]?.eid || '--'
-      },
-      width: 120
-    },
-    {
-      title: 'Player-03',
-      key: 'eid_3',
-      render: (_, record) => {
-        const teamMembers = members.filter(m => m.team_id === record.team_id)
-        return teamMembers[2]?.eid || '--'
-      },
-      width: 120
-    },
-    {
-      title: 'Player-04',
-      key: 'eid_4',
-      render: (_, record) => {
-        const teamMembers = members.filter(m => m.team_id === record.team_id)
-        return teamMembers[3]?.eid || '--'
-      },
-      width: 120
-    },
-    {
-      title: 'Completion Time',
-      dataIndex: 'completion_time',
-      key: 'completion_time',
-      width: 130,
-      render: (text) => text || '--'
+      width: 180
     },
     {
       title: 'Game Name',
       dataIndex: 'game_name',
       key: 'game_name',
-      width: 130
+      width: 160
+    },
+    {
+      title: 'Completion Time',
+      dataIndex: 'completion_time',
+      key: 'completion_time',
+      width: 150,
+      render: (text) => text || '--'
     },
     {
       title: 'Status',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
+      width: 120,
       render: (status) => {
         const colors = { registered: 'blue', in_progress: 'orange', completed: 'green' }
         return <span style={{ color: colors[status] || '#999' }}>{status || '--'}</span>
@@ -236,7 +162,7 @@ export default function AdminTab() {
         <Table
           columns={columns}
           dataSource={teams.map(t => ({ ...t, key: t.team_id }))}
-          scroll={{ x: 1200 }}
+          scroll={{ x: 730 }}
           pagination={{ pageSize: 10 }}
         />
       )}
@@ -249,18 +175,6 @@ export default function AdminTab() {
       >
         <Form form={editForm} layout="vertical" onFinish={handleEditSubmit}>
           <Form.Item name="team_name" label="Team Name" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="eid_1" label="Player-01 (SID)" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="eid_2" label="Player-02 (SID)" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="eid_3" label="Player-03 (SID)" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item name="eid_4" label="Player-04 (SID)">
             <Input />
           </Form.Item>
         </Form>

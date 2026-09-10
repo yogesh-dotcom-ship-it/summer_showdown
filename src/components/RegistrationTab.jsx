@@ -7,6 +7,7 @@ import { generateTeamId } from '../utils/teamId'
 import { getGameImage } from '../utils/gameImages'
 import { getGameDescription } from '../utils/gameDescriptions'
 import { suggestTeamNames } from '../utils/teamNameSuggestions'
+import { encodeTeamQR } from '../utils/qrPayload'
 
 const { Title, Text } = Typography
 
@@ -107,30 +108,9 @@ export default function RegistrationTab() {
       return
     }
 
-    // Fast, friendly pre-check: is any of these EIDs already registered for
-    // THIS specific game? (Same EID on a different game is fine.) The real
-    // guard is the unique(eid, game_name) constraint on ss_team_members --
-    // this only covers the common case with a nicer error message before
-    // hitting the database.
-    const { data: sameGameMembers, error: lookupError } = await supabase
-      .from('ss_team_members')
-      .select('eid')
-      .eq('game_name', selectedGame)
-      .in('eid', eids)
-
-    if (lookupError) {
-      setError('Could not validate Employee IDs. Please try again.')
-      setSubmitting(false)
-      return
-    }
-
-    if (sameGameMembers && sameGameMembers.length > 0) {
-      const duplicateEids = sameGameMembers.map((m) => m.eid).join(', ')
-      setError(`Employee ID(s) ${duplicateEids} already registered for ${selectedGame}.`)
-      setSubmitting(false)
-      return
-    }
-
+    // Employee IDs are collected and printed onto the QR code, but are NOT
+    // stored in the database (company legal policy). ss_teams holds only the
+    // team_id / name / game -- enough for the leaderboard and timing.
     let team = null
     for (let attempt = 0; attempt < MAX_TEAM_ID_ATTEMPTS && !team; attempt++) {
       const team_id = generateTeamId()
@@ -168,22 +148,12 @@ export default function RegistrationTab() {
       return
     }
 
-    const { error: membersError } = await supabase
-      .from('ss_team_members')
-      .insert(eids.map((eid) => ({ team_id: team.team_id, eid })))
-
-    if (membersError) {
-      await supabase.from('ss_teams').delete().eq('team_id', team.team_id)
-      setError(
-        membersError.code === '23505'
-          ? `One of these Employee IDs was just registered for ${selectedGame} by someone else. Please check and try again.`
-          : `Registration failed: ${membersError.message}`
-      )
-      setSubmitting(false)
-      return
-    }
-
-    setRegisteredTeam({ team_id: team.team_id, team_name: team.team_name, game_name: selectedGame })
+    setRegisteredTeam({
+      team_id: team.team_id,
+      team_name: team.team_name,
+      game_name: selectedGame,
+      eids,
+    })
     setSubmitting(false)
     setNameError(null)
     setNameSuggestions([])
@@ -229,11 +199,36 @@ export default function RegistrationTab() {
                 Table no. {String(getTableNumber(registeredTeam.game_name, games)).padStart(2, '0')}
               </span>
             </div>
-            <div style={{ marginBottom: 8 }}>
+            <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'inline-block' }}>
-                <QRCodeCanvas value={registeredTeam.team_id} size={240} includeMargin level="H" />
+                <QRCodeCanvas
+                  value={encodeTeamQR({
+                    teamId: registeredTeam.team_id,
+                    teamName: registeredTeam.team_name,
+                    gameName: registeredTeam.game_name,
+                    eids: registeredTeam.eids,
+                  })}
+                  size={240}
+                  includeMargin
+                  level="M"
+                />
               </div>
             </div>
+            {registeredTeam.eids?.length > 0 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: 8 }}>
+                {registeredTeam.eids.map((eid, idx) => (
+                  <span key={idx} style={{
+                    padding: '4px 12px',
+                    border: '1px solid rgba(0,0,0,0.15)',
+                    borderRadius: '16px',
+                    fontSize: '12px',
+                    backgroundColor: 'rgba(255,255,255,0.6)'
+                  }}>
+                    {eid}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <Space style={{ width: '100%', justifyContent: 'center', gap: '12px', marginTop: 24 }}>
             <Button
@@ -394,7 +389,7 @@ export default function RegistrationTab() {
         <Text style={{ fontSize: '13px', color: '#595959' }}>
           <ul style={{ margin: '0', paddingLeft: '16px' }}>
             <li>Minimum 3 player required to play.</li>
-            <li>All employee ID must be unique across every team.</li>
+            <li>Employee IDs are printed on your QR code and are not stored.</li>
           </ul>
         </Text>
       </div>

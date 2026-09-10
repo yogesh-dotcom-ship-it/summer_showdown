@@ -1,23 +1,14 @@
-export function generateTeamCSV(teams, members) {
-  const headers = ['Team Name', 'Player-01', 'Player-02', 'Player-03', 'Player-04', 'Completion Time', 'Game Name']
+// Employee IDs are deliberately not stored (company legal policy), so the
+// export carries only team name, game, completion time, and status.
+export function generateTeamCSV(teams) {
+  const headers = ['Team Name', 'Game Name', 'Completion Time', 'Status']
 
-  const rows = teams.map(team => {
-    const teamMembers = members.filter(m => m.team_id === team.team_id)
-    const eids = ['', '', '', '']
-    teamMembers.forEach((m, idx) => {
-      if (idx < 4) eids[idx] = m.eid
-    })
-
-    return [
-      team.team_name || '',
-      eids[0] || '',
-      eids[1] || '',
-      eids[2] || '',
-      eids[3] || '',
-      team.completion_time || '',
-      team.game_name || ''
-    ]
-  })
+  const rows = teams.map(team => [
+    team.team_name || '',
+    team.game_name || '',
+    team.completion_time || '',
+    team.status || ''
+  ])
 
   const csv = [
     headers.join(','),

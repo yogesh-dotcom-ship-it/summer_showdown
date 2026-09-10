@@ -48,42 +48,12 @@ create unique index if not exists ss_teams_team_name_lower_key
   on ss_teams (lower(team_name));
 
 -- ---------------------------------------------------------------------------
--- 3. Team members table (normalized EIDs)
---    unique(eid, game_name) prevents one person being registered twice for
---    the SAME game, while still allowing them to join a DIFFERENT game on
---    a different team. game_name is denormalized from ss_teams (via the
---    trigger below) purely so this composite constraint can exist --
---    Postgres unique constraints can't reference a column on another table.
+-- 3. Employee IDs are NOT stored.
+--    Company legal policy: employee IDs (SIDs) must not be persisted. They
+--    are collected at registration and encoded into the team's QR code, so
+--    the scan station reads them from the QR itself. There is deliberately
+--    no team-members table.
 -- ---------------------------------------------------------------------------
-create table if not exists ss_team_members (
-  id bigint generated always as identity primary key,
-  team_id text not null references ss_teams(team_id) on delete cascade,
-  eid text not null,
-  game_name text not null references ss_games(name),
-  constraint ss_team_members_eid_game_key unique (eid, game_name)
-);
-
-create index if not exists ss_team_members_team_idx on ss_team_members (team_id);
-create index if not exists ss_team_members_eid_idx on ss_team_members (eid);
-
--- Keep game_name in sync with the parent team automatically, so the app
--- only ever has to insert (team_id, eid) and can't drift from the team's
--- actual game.
-create or replace function ss_team_members_set_game_name()
-returns trigger as $$
-begin
-  select game_name into new.game_name
-  from ss_teams
-  where team_id = new.team_id;
-  return new;
-end;
-$$ language plpgsql;
-
-drop trigger if exists ss_team_members_set_game_name_trg on ss_team_members;
-create trigger ss_team_members_set_game_name_trg
-  before insert on ss_team_members
-  for each row
-  execute function ss_team_members_set_game_name();
 
 -- ---------------------------------------------------------------------------
 -- 4. Row Level Security
@@ -95,16 +65,12 @@ create trigger ss_team_members_set_game_name_trg
 -- ---------------------------------------------------------------------------
 alter table ss_games enable row level security;
 alter table ss_teams enable row level security;
-alter table ss_team_members enable row level security;
 
 create policy "public read games" on ss_games for select using (true);
 
 create policy "public read teams" on ss_teams for select using (true);
 create policy "public insert teams" on ss_teams for insert with check (true);
 create policy "public update teams" on ss_teams for update using (true);
-
-create policy "public read team_members" on ss_team_members for select using (true);
-create policy "public insert team_members" on ss_team_members for insert with check (true);
 
 -- ---------------------------------------------------------------------------
 -- 5. Realtime

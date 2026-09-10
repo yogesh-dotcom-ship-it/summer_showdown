@@ -4,6 +4,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 import { supabase } from '../lib/supabaseClient'
 import Stopwatch from './Stopwatch'
 import PasswordModal from './PasswordModal'
+import { decodeTeamQR } from '../utils/qrPayload'
 
 const GAME_COLORS = [
   { bg: '#fffbe6', border: '#faad14' }, // Yellow
@@ -64,7 +65,7 @@ export default function ScanTab() {
           if (stopped) return
           stopped = true
           setScanning(false)
-          lookupTeam(decodedText.trim())
+          handleScan(decodedText)
         },
         () => {
           // per-frame decode failures are normal while the camera hunts for a code; ignore
@@ -90,13 +91,24 @@ export default function ScanTab() {
     }
   }, [scanning])
 
-  async function lookupTeam(teamId) {
+  async function handleScan(decodedText) {
     setLookupError(null)
     setSubmitError(null)
+
+    const payload = decodeTeamQR(decodedText)
+    if (!payload) {
+      setLookupError('QR code is not valid.')
+      setTeam(null)
+      return
+    }
+
+    // The QR carries the team name, game, and employee IDs -- those are NOT
+    // in the database (legal policy). The database row exists only for the
+    // leaderboard / timing, and is looked up by team_id for its status.
     const { data: teamData, error: teamError } = await supabase
       .from('ss_teams')
       .select('team_id, team_name, game_name, status, completion_time')
-      .eq('team_id', teamId)
+      .eq('team_id', payload.teamId)
       .maybeSingle()
 
     if (teamError || !teamData) {
@@ -105,13 +117,14 @@ export default function ScanTab() {
       return
     }
 
-    const { data: memberData } = await supabase
-      .from('ss_team_members')
-      .select('eid')
-      .eq('team_id', teamId)
-
-    setTeam(teamData)
-    setMembers(memberData?.map((m) => m.eid) ?? [])
+    // Trust the QR for display fields; fall back to the DB row for a legacy
+    // (id-only) QR that carries no name/game.
+    setTeam({
+      ...teamData,
+      team_name: payload.teamName || teamData.team_name,
+      game_name: payload.gameName || teamData.game_name,
+    })
+    setMembers(payload.eids ?? [])
 
     // Mark the team as in progress the moment it's scanned in, so the
     // dashboard's "Next Turn" ordering reflects who's currently running.
@@ -119,7 +132,7 @@ export default function ScanTab() {
       await supabase
         .from('ss_teams')
         .update({ status: 'in_progress', started_at: new Date().toISOString() })
-        .eq('team_id', teamId)
+        .eq('team_id', payload.teamId)
     }
   }
 
