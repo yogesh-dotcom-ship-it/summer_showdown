@@ -150,6 +150,18 @@ export default function RegistrationTab() {
   const handleDownloadQR = async () => {
     if (!successCardRef.current) return
     setDownloading(true)
+
+    // html2canvas doesn't reliably rasterise a <canvas> that's been scaled
+    // down with CSS (width:100%). Snap the QR back to its natural pixel size
+    // for the capture, then restore the responsive style afterwards.
+    const qr = successCardRef.current.querySelector('#registration-qr-canvas')
+    const prev = qr ? { width: qr.style.width, height: qr.style.height, maxWidth: qr.style.maxWidth } : null
+    if (qr) {
+      qr.style.width = `${qr.width}px`
+      qr.style.height = `${qr.height}px`
+      qr.style.maxWidth = 'none'
+    }
+
     try {
       const canvas = await html2canvas(successCardRef.current, {
         backgroundColor: null,
@@ -160,6 +172,11 @@ export default function RegistrationTab() {
       link.download = `${registeredTeam.team_name}_registration.png`
       link.click()
     } finally {
+      if (qr && prev) {
+        qr.style.width = prev.width
+        qr.style.height = prev.height
+        qr.style.maxWidth = prev.maxWidth
+      }
       setDownloading(false)
     }
   }
@@ -208,6 +225,7 @@ export default function RegistrationTab() {
               borderRadius: 4,
             }}>
               <QRCodeCanvas
+                id="registration-qr-canvas"
                 value={encodeTeamQR({
                   teamId: registeredTeam.team_id,
                   teamName: registeredTeam.team_name,
