@@ -43,6 +43,7 @@ export default function RegistrationTab() {
   const [selectedGame, setSelectedGame] = useState(null)
   const [step, setStep] = useState('gameSelection') // 'gameSelection' or 'teamRegistration'
   const [downloading, setDownloading] = useState(false)
+  const [nameError, setNameError] = useState(null)
   const [nameSuggestions, setNameSuggestions] = useState([])
   const successCardRef = useRef(null)
 
@@ -68,19 +69,18 @@ export default function RegistrationTab() {
   async function handleRegistrationSubmit(values) {
     setSubmitting(true)
     setError(null)
+    setNameError(null)
     setNameSuggestions([])
 
     const teamName = values.team_name.trim()
 
     // Team names must be unique across every team, regardless of game.
-    // Checked case-insensitively; the real guard is the unique index on
-    // lower(team_name) in the database, this just gives a friendlier error
-    // and offers alternative names.
-    const { data: nameClash, error: nameLookupError } = await supabase
+    // Fetch every existing name once: used both to detect the clash
+    // (case-insensitively) and to filter the suggestions. The real guard is
+    // the unique index on lower(team_name) in the database.
+    const { data: allTeams, error: nameLookupError } = await supabase
       .from('ss_teams')
       .select('team_name')
-      .ilike('team_name', teamName)
-      .maybeSingle()
 
     if (nameLookupError) {
       setError('Could not validate the team name. Please try again.')
@@ -88,11 +88,11 @@ export default function RegistrationTab() {
       return
     }
 
-    if (nameClash) {
-      const { data: allTeams } = await supabase.from('ss_teams').select('team_name')
-      const takenLower = new Set((allTeams ?? []).map((t) => t.team_name.toLowerCase()))
+    const takenLower = new Set((allTeams ?? []).map((t) => t.team_name.trim().toLowerCase()))
+
+    if (takenLower.has(teamName.toLowerCase())) {
       setNameSuggestions(suggestTeamNames(teamName, takenLower))
-      setError(`Team name "${teamName}" is already taken. Please choose a different name.`)
+      setNameError(`Team name "${teamName}" is already taken. Please choose a different name.`)
       setSubmitting(false)
       return
     }
@@ -148,10 +148,10 @@ export default function RegistrationTab() {
       // or team_name (someone just took it -- retrying the same name won't
       // help).
       if (insertError.code === '23505' && insertError.message?.includes('team_name')) {
-        const { data: allTeams } = await supabase.from('ss_teams').select('team_name')
-        const takenLower = new Set((allTeams ?? []).map((t) => t.team_name.toLowerCase()))
-        setNameSuggestions(suggestTeamNames(teamName, takenLower))
-        setError(`Team name "${teamName}" was just taken by someone else. Please choose a different name.`)
+        const { data: latestTeams } = await supabase.from('ss_teams').select('team_name')
+        const latestTakenLower = new Set((latestTeams ?? []).map((t) => t.team_name.trim().toLowerCase()))
+        setNameSuggestions(suggestTeamNames(teamName, latestTakenLower))
+        setNameError(`Team name "${teamName}" was just taken by someone else. Please choose a different name.`)
         setSubmitting(false)
         return
       }
@@ -185,6 +185,8 @@ export default function RegistrationTab() {
 
     setRegisteredTeam({ team_id: team.team_id, team_name: team.team_name, game_name: selectedGame })
     setSubmitting(false)
+    setNameError(null)
+    setNameSuggestions([])
     form.resetFields()
   }
 
@@ -324,6 +326,9 @@ export default function RegistrationTab() {
           disabled={!selectedGame}
           onClick={() => {
             setStep('teamRegistration')
+            setError(null)
+            setNameError(null)
+            setNameSuggestions([])
             form.resetFields()
           }}
         >
@@ -342,34 +347,9 @@ export default function RegistrationTab() {
           type="error"
           showIcon
           message={error}
-          description={
-            nameSuggestions.length > 0 ? (
-              <div style={{ marginTop: 8 }}>
-                <Text style={{ fontSize: '13px' }}>Try one of these:</Text>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: 6 }}>
-                  {nameSuggestions.map((s) => (
-                    <Button
-                      key={s}
-                      size="small"
-                      onClick={() => {
-                        form.setFieldValue('team_name', s)
-                        setError(null)
-                        setNameSuggestions([])
-                      }}
-                    >
-                      {s}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            ) : null
-          }
           style={{ marginBottom: 16 }}
           closable
-          onClose={() => {
-            setError(null)
-            setNameSuggestions([])
-          }}
+          onClose={() => setError(null)}
         />
       )}
 
@@ -425,17 +405,41 @@ export default function RegistrationTab() {
           label="Team Name"
           required
           rules={[{ required: true, message: 'Team name is required' }]}
+          validateStatus={nameError ? 'error' : undefined}
+          help={nameError || undefined}
+          style={{ marginBottom: nameSuggestions.length > 0 ? 4 : undefined }}
         >
           <Input
             placeholder="e.g. The Sprinters"
             onChange={() => {
-              if (nameSuggestions.length > 0) {
+              if (nameError || nameSuggestions.length > 0) {
+                setNameError(null)
                 setNameSuggestions([])
-                setError(null)
               }
             }}
           />
         </Form.Item>
+
+        {nameSuggestions.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <Text style={{ fontSize: '13px', color: '#8c8c8c' }}>Try one of these:</Text>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: 6 }}>
+              {nameSuggestions.map((s) => (
+                <Button
+                  key={s}
+                  size="small"
+                  onClick={() => {
+                    form.setFieldValue('team_name', s)
+                    setNameError(null)
+                    setNameSuggestions([])
+                  }}
+                >
+                  {s}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {[1, 2, 3, 4].map((n) => {
           const isRequired = n !== 4
