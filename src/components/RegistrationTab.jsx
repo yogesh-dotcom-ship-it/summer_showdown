@@ -260,21 +260,10 @@ export default function RegistrationTab() {
       await waitForCanvasPainted(exportQrRef, 2000)
       const blob = await buildRegistrationPng()
       const fileName = `${registeredTeam.team_name}_registration.png`
-      const file = new File([blob], fileName, { type: 'image/png' })
 
-      // iOS Safari ignores <a download>; the Web Share API is the reliable
-      // path there ("Save Image" in the share sheet). Use it when available
-      // and the file is shareable; fall back to a blob-URL download link
-      // (Android, desktop), then to opening the image in a new tab.
-      if (navigator.canShare?.({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: fileName })
-          return
-        } catch (err) {
-          if (err?.name === 'AbortError') return // user dismissed the sheet
-        }
-      }
-
+      // Preferred path everywhere that supports it: a real file download
+      // via a blob-URL <a download>. Works on desktop (all browsers) and
+      // Android Chrome/Firefox.
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
@@ -282,13 +271,26 @@ export default function RegistrationTab() {
       document.body.appendChild(link)
       link.click()
       link.remove()
-
-      // Some in-app / iOS browsers silently ignore the download attribute;
-      // open the image so the user can long-press to save.
-      const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent)
-      if (isIOS) window.open(url, '_blank')
-
       setTimeout(() => URL.revokeObjectURL(url), 10000)
+
+      // iOS Safari silently ignores <a download>. Only there, fall back to
+      // the share sheet ("Save Image" / "Save to Files"), and if that's
+      // unavailable, open the image so the user can long-press to save.
+      const isIOS =
+        /iP(hone|ad|od)/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) // iPadOS
+      if (isIOS) {
+        const file = new File([blob], fileName, { type: 'image/png' })
+        if (navigator.canShare?.({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: fileName })
+          } catch (err) {
+            if (err?.name !== 'AbortError') window.open(URL.createObjectURL(blob), '_blank')
+          }
+        } else {
+          window.open(URL.createObjectURL(blob), '_blank')
+        }
+      }
     } catch (err) {
       setError(`Could not generate the image: ${err.message}`)
     } finally {
